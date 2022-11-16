@@ -2,7 +2,7 @@
 set -x
 set -e
 
-if [ -n ${GO_VERSION} ]
+if [ ${GO_VERSION} == "" ]
 then
 	echo "$GO_VERSION is not specified. Install the default(now v1.19.3) version."
 	GO_VERSION=1.19.3
