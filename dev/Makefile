@@ -1,11 +1,12 @@
 SUDO := sudo
 MIRROR := http://ftp.riken.go.jp/Linux/ubuntu/
 BIN_DIR := scripts
+WORK_DIR := ~/workspace
 
 .PHONY: setup-basic-tools
 setup-basic-tools:
 	${SUDO} apt update -y 
-	${SUDO} apt install -y curl
+	${SUDO} apt install -y curl build-essential frr
 
 .PHONY: setup-golang
 setup-golang:
@@ -42,3 +43,29 @@ setup-zshrc:
 .PHONY: setup-vim
 setup-vim:
 	ln -snfv ${CURDIR}/dotfiles/.vimrc ~/
+	
+.PHONY: setup-zsh
+setup-zsh:
+	${SUDO} apt install -y zsh peco
+	${SUDO} chsh -s /bin/zsh
+	mkdir -p ~/.zplug
+	git clone https://github.com/zplug/zplug ~/.zplug
+	ln -snfv ${CURDIR}/dotfiles/.zshrc ~/
+
+.PHONY: setup-starship
+setup-sharship:
+	cargo install starship
+
+.PHONY: setup-dev-routing
+setup-dev-routing: setup-grpc
+	mkdir -p ${WORK_DIR}
+	${SUDO} apt install -y frr
+	go install github.com/osrg/gobgp/gobgpd@latest
+	git clone https://github.com/tinynetwork/tinet ${WORK_DIR}/tinet && cd ${WORK_DIR}/tinet
+	docker run --rm -i -t -v ${CURDIR}:/v -w /v golang:1.12 go build
+	${SUDO} mv tinet /usr/local/bin
+
+.PHONY: setup-grpc
+setup-grpc:
+	${SUDO} apt install -y protobuf-compiler libprotobuf-dev
+	go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
