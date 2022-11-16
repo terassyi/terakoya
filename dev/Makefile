@@ -55,6 +55,8 @@ setup-zsh:
 .PHONY: setup-starship
 setup-sharship:
 	cargo install starship
+	mkdir -p ~/.config
+	ln -snfv ${CURDIR}/dotfiles/.config/starship.toml ~/.config
 
 .PHONY: setup-dev-routing
 setup-dev-routing: setup-grpc
