@@ -29,20 +29,14 @@ alias cl='clear'
 alias ..='cd ..'
 alias date="gdate"
 # alias cat="batcat"
-export PATH="/opt/homebrew/opt/grep/libexec/gnubin:$PATH"
-
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-PYTHONDONTWRITEBYTECODE=1
-
-# deno settings
-export DENO_INSTALL="$HOME/.deno"
-export PATH="$DENO_INSTALL/bin:$PATH"
+# GoLang
 
 # peco settings
 # history
-HISTFILE=$HOME/.zsh_history
+HISTFILE=$HOME/.zsh-history
+>>>>>>> 3165001 (add zsh config)
 HISTSIZE=100000
 SAVEHIST=100000
 
@@ -51,7 +45,7 @@ setopt inc_append_history
 setopt share_history
 
 function peco-history-selection() {
-    BUFFER=`history -n 1 | tail -r  | awk '!a[$0]++' | peco`
+    BUFFER=`history -n 1 | tac  | awk '!a[$0]++' | peco`
     CURSOR=$#BUFFER
     zle reset-prompt
 }
