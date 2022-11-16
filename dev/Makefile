@@ -6,7 +6,7 @@ WORK_DIR := ~/workspace
 .PHONY: setup-basic-tools
 setup-basic-tools:
 	${SUDO} apt update -y 
-	${SUDO} apt install -y curl build-essential frr
+	${SUDO} apt install -y curl build-essential cmake
 
 .PHONY: setup-golang
 setup-golang:
@@ -27,7 +27,8 @@ setup-docker:
 install-dotfiles:
 	${SUDO} apt install -y tmux
 	mkdir -p ${CURDIR}/${SHELL_NAME}/dotfiles
-	sed -e "s/SHELL_NAME/${SHELL_NAME}/g" dotfiles/.tmux.conf > ${CURDIR}/${SHELL_NAME}/dotfiles/.tmux.conf
+	cp dotfiles/.tmux.conf ${CURDIR}/${SHELL_NAME}/dotfiles/
+	sed -i -e "s/SHELL_NAME/${SHELL_NAME}/g" ${CURDIR}/${SHELL_NAME}/dotfiles/.tmux.conf
 	ln -snfv ${CURDIR}/${SHELL_NAME}/dotfiles/.tmux.conf ~/
 
 .PHONY: setup-bashrc
@@ -53,8 +54,8 @@ setup-zsh:
 	ln -snfv ${CURDIR}/dotfiles/.zshrc ~/
 
 .PHONY: setup-starship
-setup-sharship:
-	cargo install starship
+setup-starship:
+	cargo install starship --locked
 	mkdir -p ~/.config
 	ln -snfv ${CURDIR}/dotfiles/.config/starship.toml ~/.config
 

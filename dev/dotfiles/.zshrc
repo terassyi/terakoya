@@ -31,12 +31,14 @@ alias date="gdate"
 # alias cat="batcat"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
 # GoLang
+export GOPATH=${HOME}/go
+export PATH=/usr/local/go/bin:${GOPATH}/bin:${PATH}
 
 # peco settings
 # history
 HISTFILE=$HOME/.zsh-history
->>>>>>> 3165001 (add zsh config)
 HISTSIZE=100000
 SAVEHIST=100000
 
