@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubuntu-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - args:
+        - pause
+        image: quay.io/cybozu/ubuntu-debug:20.04
+        name: ubuntu
