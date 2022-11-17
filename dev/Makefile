@@ -3,6 +3,8 @@ MIRROR := http://ftp.riken.go.jp/Linux/ubuntu/
 BIN_DIR := scripts
 WORK_DIR := ~/workspace
 
+GO_BGP := 3.8.0
+
 .PHONY: setup-basic-tools
 setup-basic-tools:
 	${SUDO} apt update -y 
@@ -50,7 +52,7 @@ setup-zsh:
 	${SUDO} apt install -y zsh peco
 	${SUDO} chsh -s /bin/zsh
 	mkdir -p ~/.zplug
-	git clone https://github.com/zplug/zplug ~/.zplug
+	git clone https://github.com/zplug/zplug ~/.zplug || true
 	ln -snfv ${CURDIR}/dotfiles/.zshrc ~/
 
 .PHONY: setup-starship
@@ -63,10 +65,12 @@ setup-starship:
 setup-dev-routing: setup-grpc
 	mkdir -p ${WORK_DIR}
 	${SUDO} apt install -y frr
-	go install github.com/osrg/gobgp/gobgpd@latest
-	git clone https://github.com/tinynetwork/tinet ${WORK_DIR}/tinet && cd ${WORK_DIR}/tinet
-	docker run --rm -i -t -v ${CURDIR}:/v -w /v golang:1.12 go build
-	${SUDO} mv tinet /usr/local/bin
+	curl -sSLf https://github.com/osrg/gobgp/releases/download/v${GO_BGP}/gobgp_${GO_BGP}_linux_amd64.tar.gz | ${SUDO} tar -C /usr/local/bin -xzf -
+	${SUDO} chmod +x /usr/local/bin/gobgp
+	${SUDO} chmod +x /usr/local/bin/gobgpd
+	git clone https://github.com/tinynetwork/tinet ${WORK_DIR}/tinet && cd ${WORK_DIR}/tinet || true
+	docker run --rm -i -t -v ${WORK_DIR}/tinet:/v -w /v golang:1.19 go build
+	${SUDO} mv ${WORK_DIR}/tinet/tinet /usr/local/bin
 
 .PHONY: setup-grpc
 setup-grpc:
