@@ -58,4 +58,7 @@ bindkey '^R' peco-history-selection
 # aqua path
 export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
 
+# cargo
+export PATH="$HOME/.cargo/bin:$PATH"
+
 eval "$(starship init zsh)"

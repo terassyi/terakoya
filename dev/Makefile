@@ -23,6 +23,7 @@ setup-rust:
 setup-docker:
 	curl -fsSL https://get.docker.com -o get-docker.sh
 	${SUDO} sh get-docker.sh
+	rm get-docker.sh
 	${SUDO} adduser ${USER} docker
 	
 .PHONY: install-dotfiles
