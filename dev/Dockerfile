@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 ARG GO_VERSION
 
 RUN apt update -y && \
-	apt install -y curl wget build-essential cmake make git sudo iputils-ping
+	apt install -y curl wget build-essential cmake make git sudo iputils-ping tcpdump
 
 RUN apt install -y frr
 RUN apt install -y protobuf-compiler libprotobuf-dev
