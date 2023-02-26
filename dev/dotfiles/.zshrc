@@ -62,3 +62,8 @@ export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua
 export PATH="$HOME/.cargo/bin:$PATH"
 
 eval "$(starship init zsh)"
+
+# vagrant settings
+export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
+# export VAGRANT_WSL_WINDOWS_ACCESS_USER_HOME_PATH=/mnt/c/vagrant
+export VAGRANT_WSL_WINDOWS_ACCESS_USER_HOME_PATH="/mnt/c/Users/terassyi"
