@@ -64,6 +64,13 @@ setup-starship:
 	mkdir -p ~/.config
 	ln -snfv ${CURDIR}/dotfiles/.config/starship.toml ~/.config
 
+.PHONY: setup-alacritty
+setup-alacritty:
+	mkdir -p ~/.config/alacritty
+	mkdir -p ~/.config/alacritty/themes
+	git clone https://github.com/alacritty/alacritty-theme ~/.config/alacritty/themes || true
+	ln -snfv ${CURDIR}/dotfiles/.config/alacritty/alacritty.yml ~/.config/alacritty/alacritty.yml
+
 .PHONY: setup-dev-routing
 setup-dev-routing: setup-grpc
 	mkdir -p ${WORK_DIR}
@@ -84,4 +91,3 @@ setup-grpc:
 setup-cloudflared:
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
 	sudo dpkg -i cloudflared-linux-amd64.deb
-
