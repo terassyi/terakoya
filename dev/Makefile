@@ -3,6 +3,7 @@ MIRROR := http://ftp.riken.go.jp/Linux/ubuntu/
 BIN_DIR := scripts
 WORK_DIR := ~/workspace
 
+
 GO_BGP := 3.8.0
 
 .PHONY: setup-basic-tools
@@ -47,6 +48,7 @@ setup-zshrc:
 .PHONY: setup-vim
 setup-vim:
 	ln -snfv ${CURDIR}/dotfiles/.vimrc ~/
+	curl -fsSL https://deno.land/x/install/install.sh | sh
 	
 .PHONY: setup-zsh
 setup-zsh:
@@ -77,3 +79,9 @@ setup-dev-routing: setup-grpc
 setup-grpc:
 	${SUDO} apt install -y protobuf-compiler libprotobuf-dev
 	go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
+.PHONY: setup-cloudflared
+setup-cloudflared:
+	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+	sudo dpkg -i cloudflared-linux-amd64.deb
+

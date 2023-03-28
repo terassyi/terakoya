@@ -73,3 +73,5 @@ export PATH="$HOME/.local/bin:$PATH"
 # deno
 export DENO_INSTALL="/home/terassyi/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
+
+source /home/terassyi/.config/broot/launcher/bash/br
