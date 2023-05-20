@@ -1,3 +1,6 @@
+# lang
+# export LANG=en_US
+
 # zplug settings
 export ZPLUG_HOME=~/.zplug
 source $ZPLUG_HOME/init.zsh
@@ -69,9 +72,13 @@ export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
 export VAGRANT_WSL_WINDOWS_ACCESS_USER_HOME_PATH="/mnt/c/Users/terassyi"
 
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="/usr/local/sbin:$PATH"
 
 # deno
 export DENO_INSTALL="/home/terassyi/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
 
 source /home/terassyi/.config/broot/launcher/bash/br
+
+# gh
+eval "$(gh completion -s zsh)"
