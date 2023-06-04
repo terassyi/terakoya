@@ -1,0 +1,43 @@
+---
+- name: gather os facts
+  ansible.builtin.gather_facts:
+
+- import_tasks: _yum.yml
+  when: ansible_facts.pkg_mgr == 'yum'
+
+- import_tasks: _apt.yml
+  when: ansible_facts.pkg_mgr == 'apt'
+
+- name: download helm
+  unarchive:
+    src: https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz
+    dest: /tmp/
+    remote_src: yes
+- name: install helm
+  copy:
+    src: /tmp/linux-amd64/helm
+    dest: /usr/local/bin/helm
+    remote_src: yes
+    mode: a+x
+
+- name: create kubelet config directory
+  become: yes
+  file:
+    path: /etc/systemd/system/kubelet.service.d/
+    state: directory
+    mode: 0755
+
+- name: copy kubelet.conf from template
+  become: yes
+  vars:
+    node_ip: "{{ ansible_facts.eth1.ipv4.address }}"
+  template:
+    src: 10-kubeadm.conf.j2
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+- name: start and enable kubelet
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: kubelet

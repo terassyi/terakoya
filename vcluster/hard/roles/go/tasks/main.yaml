@@ -1,0 +1,32 @@
+---
+- name: Create directory
+  become: yes
+  file:
+    path: "/usr/local/go"
+    state: directory
+- name: If file exist
+  become: yes
+  stat:
+    path: "{{ item }}"
+  register: file_stats
+  with_items:
+    - /tmp/go{{ go.version }}.{{ go.arch }}.tar.gz
+    - /usr/local/go/bin
+- name: Get go archive
+  become: yes
+  get_url:
+    url: "https://go.dev/dl/go{{ go.version }}.{{ go.arch }}.tar.gz"
+    dest: /tmp
+  when:
+    - file_stats.results[0].stat.exists == False
+- name: Unarchive go
+  become: yes
+  command: "tar zxvf /tmp/go{{ go.version }}.{{ go.arch }}.tar.gz -C /usr/local/"
+  when: 
+    - file_stats.results[1].stat.exists == False
+- name: Export go to PATH
+  become: yes
+  template:
+    src: go.sh
+    dest: /etc/profile.d/go.sh
+

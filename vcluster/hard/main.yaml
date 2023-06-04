@@ -1,0 +1,13 @@
+---
+- name: Install basic tools
+  become: yes
+  hosts: all
+  roles:
+    - go
+    - client-tools
+
+- name: Install certificates
+  become: yes
+  hosts: master,worker
+  roles:
+    - ca-certificates

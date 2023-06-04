@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: false
+  become: true
+  roles:
+    - swap_off
+    - configure_firewalld
+    - set_bridged_traffic
+    - install_container_runtime
+    - install_kube_tools

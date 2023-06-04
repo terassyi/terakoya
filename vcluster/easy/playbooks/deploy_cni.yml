@@ -1,0 +1,21 @@
+---
+- hosts: all
+  gather_facts: false
+  become: true
+  roles:
+  - role: cni/flannel
+    when: use_cni_plugin == 'flannel'
+
+- hosts: all
+  gather_facts: false
+  become: true
+  roles:
+  - role: cni/calico
+    when: use_cni_plugin == 'calico'
+
+- hosts: all
+  gather_facts: false
+  become: yes
+  roles:
+  - role: cni/cilium
+    when: use_cni_plugin == 'cilium'

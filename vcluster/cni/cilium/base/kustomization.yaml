@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - bgp_config.yaml
+  - upstream.yaml
+
+patchesStrategicMerge:
+  - agent_patch.yaml
+  - operator_patch.yaml

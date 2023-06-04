@@ -1,0 +1,20 @@
+---
+- name: allow required ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop: "{{ required_ports }}"
+  when: enable_firewalld is defined and enable_firewalld|bool
+
+- name: disable firewalld
+  systemd:
+    state: stopped
+    enabled: no
+    name: firewalld
+  when: not (enable_firewalld is defined and enable_firewalld|bool)
+  register: disable_firewalld
+  vars:
+    ignore_msg: "Could not find the requested service firewalld: host"
+  failed_when: disable_firewalld.msg != "{{ ignore_msg }}"

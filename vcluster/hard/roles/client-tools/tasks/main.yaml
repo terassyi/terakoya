@@ -1,0 +1,61 @@
+- name: Install git
+  apt:
+    name: git
+    update_cache: yes
+  tags:
+    - install-tools
+
+- name: Download and extract Kubernetes Client
+  unarchive:
+    src: https://dl.k8s.io/{{ kubernetes.version }}/kubernetes-client-linux-amd64.tar.gz
+    dest: /opt/
+    remote_src: yes
+  tags:
+    - install-tools
+
+- name: Install kubectl
+  copy:
+    src: /opt/kubernetes/client/bin/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: a+x
+    remote_src: yes
+  tags:
+    - install-tools
+
+- name: Download cfssl
+  become: yes
+  get_url:
+    url: https://github.com/cloudflare/cfssl/releases/download/v{{ tools.cfssl.version }}/cfssl_{{ tools.cfssl.version }}_linux_amd64
+    dest: /opt/cfssljson
+  tags:
+    - install-tools
+    - install-cfssl
+
+- name: Download cfssljson
+  become: yes
+  get_url:
+    url: https://github.com/cloudflare/cfssl/releases/download/v{{ tools.cfssl.version }}/cfssljson_{{ tools.cfssl.version }}_linux_amd64
+    dest: /opt/cfssl
+  tags:
+    - install-tools
+    - install-cfssl
+
+- name: Install cfssl
+  copy:
+    src: /opt/cfssl
+    dest: /usr/local/bin/cfssl
+    mode: a+x
+    remote_src: yes
+  tags:
+    - install-tools
+    - install-cfssl
+
+- name: Install cfssljson
+  copy:
+    src: /opt/cfssljson
+    dest: /usr/local/bin/cfssljson
+    mode: a+x
+    remote_src: yes
+  tags:
+    - install-tools
+    - install-cfssl
