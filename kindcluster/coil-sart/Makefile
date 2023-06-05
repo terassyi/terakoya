@@ -8,7 +8,11 @@ CERT_MANAGER_VERSION := 1.12.1
 COIL_VERSION ?= 2.3.0
 SART_VERSION ?= 0.0.4
 
+SUDO ?= sudo
+
 BINDIR := $(abspath $(PWD)/../bin)
+TMPDIR := $(abspath $(PWD)/../tmp)
+MANIFESTDIR := $(abspath $(PWD)/manifests)
 
 KIND := $(BINDIR)/kind
 KUBECTL := $(BINDIR)/kubectl
@@ -35,6 +39,9 @@ ANOTHER_ESCAPED_LB_CIDR ?= "10.69.10.0\/24"
 
 .PHONY: start
 start: $(KIND) $(KUBECTL) $(KUSTOMIZE)
+	${SUDO} sysctl -w fs.inotify.max_user_instances=512
+	${SUDO} sysctl -w fs.inotify.max_user_watches=65536
+
 	$(KIND) create cluster --image kindest/node:v$(KUBERNETES_VERSION) --name $(CLUSTER_NAME) --config $(KIND_CONFIG)
 
 	$(KUBECTL) label nodes --overwrite $(CLUSTER_NAME)-control-plane sart.terassyi.net/asn=${NODE0_ASN}
@@ -50,7 +57,10 @@ start: $(KIND) $(KUBECTL) $(KUSTOMIZE)
 	docker run -d --privileged --network kind  --rm --ulimit core=-1 --name external-bgp --volume `pwd`/external-bgp/frr:/etc/frr/ ghcr.io/terassyi/terakoya:0.1.2 tail -f /dev/null
 	docker run -d --privileged --network kind --rm --name external-client ghcr.io/terassyi/terakoya:0.1.2 tail -f /dev/null
 
-	make configure
+	$(MAKE) install-coil
+	$(KUBECTL) apply -f $(MANIFESTDIR)/pod/test-pod.yaml
+
+	# make configure
 
 .PHONY: configure
 configure:
@@ -94,6 +104,26 @@ install: install-cert-manager
 install-cert-manager:
 	$(KUBECTL) apply -f https://github.com/jetstack/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
 	$(KUBECTL) -n cert-manager wait --for=condition=available --timeout=180s --all deployments
+
+.PHONY: install-coil
+install-coil: clone-coil-repo
+	mkdir -p $(MANIFESTDIR)/coil
+
+	cd $(TMPDIR)/coil/v2; \
+	make certs && \
+	$(KUSTOMIZE) build . > $(MANIFESTDIR)/coil/coil.yaml
+	$(KUBECTL) apply -f $(MANIFESTDIR)/coil/coil.yaml
+	$(KUBECTL) -n kube-system wait --for=condition=available --timeout=180s deployment/coil-controller
+	$(KUBECTL) apply -f $(MANIFESTDIR)/coil/addresspool.yaml
+
+.PHONY: clone-coil-repo
+clone-coil-repo:
+	mkdir -p $(TMPDIR)
+	if [ -d "$(TMPDIR)/coil" ]; then \
+        cd $(TMPDIR)/coil; git fetch origin; git checkout v$(COIL_VERSION); \
+    else \
+		cd $(TMPDIR); git clone https://github.com/cybozu-go/coil.git; cd coil; git checkout v$(COIL_VERSION); \
+    fi
 
 .PHONY: stop
 stop: $(KIND)
