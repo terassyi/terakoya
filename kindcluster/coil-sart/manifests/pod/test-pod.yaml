@@ -11,7 +11,7 @@ metadata:
 spec:
   containers:
     - name: test
-      image: ubuntu
+      image: ghcr.io/terassyi/terakoya:0.1.2
       command: ["sleep", "infinity"]
 ---
 apiVersion: v1
@@ -22,7 +22,6 @@ metadata:
 spec:
   containers:
     - name: test
-      image: ubuntu
+      image: ghcr.io/terassyi/terakoya:0.1.2
       command: ["sleep", "infinity"]
 ---
-
