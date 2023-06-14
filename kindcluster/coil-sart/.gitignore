@@ -1,3 +1,5 @@
 staticd.conf
 gobgp.conf
 zebra.conf
+manifests/sart/bgp-config*.yaml
+manifests/coil/addresspool.yaml

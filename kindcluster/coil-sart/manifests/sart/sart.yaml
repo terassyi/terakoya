@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: sartd
+    component: sartd
+  name: sartd
+spec:
+  selector:
+    matchLabels:
+      app: sartd
+      component: sartd
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "7472"
+        prometheus.io/scrape: "true"
+      labels:
+        app: sartd
+        component: sartd
+    spec:
+      containers:
+        - name: fib
+          image: sart:dev
+          imagePullPolicy: IfNotPresent
+          command: ["sartd"]
+          args:
+            - fib
+            - -f
+            - /etc/sart/fib-config.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_RAW
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: sartd-fib-config
+              mountPath: /etc/sart/fib-config.yaml
+              subPath: fib-config.yaml
+        - command: ["sartd"]
+          args:
+            - bgp
+            - -f
+            - /etc/sart/bgp-config-$(NODE_NAME).yaml
+            - --fib
+            - localhost:5010
+          env:
+            - name: SARTD_BGP_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          image: sart:dev
+          imagePullPolicy: IfNotPresent
+          name: bgp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_RAW
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: sartd-bgp-config-coil-sart-control-plane
+              mountPath: /etc/sart/bgp-config-coil-sart-control-plane.yaml
+              subPath: bgp-config-coil-sart-control-plane.yaml
+            - name: sartd-bgp-config-coil-sart-worker
+              mountPath: /etc/sart/bgp-config-coil-sart-worker.yaml
+              subPath: bgp-config-coil-sart-worker.yaml
+            - name: sartd-bgp-config-coil-sart-worker2
+              mountPath: /etc/sart/bgp-config-coil-sart-worker2.yaml
+              subPath: bgp-config-coil-sart-worker2.yaml
+            - name: sartd-bgp-config-coil-sart-worker3
+              mountPath: /etc/sart/bgp-config-coil-sart-worker3.yaml
+              subPath: bgp-config-coil-sart-worker3.yaml
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      # serviceAccountName: sartd
+      terminationGracePeriodSeconds: 2
+      volumes:
+      - name: sartd-fib-config
+        configMap:
+          name: sartd-fib-config
+          items:
+          - key: fib-config.yaml
+            path: fib-config.yaml
+      - name: sartd-bgp-config-coil-sart-control-plane
+        configMap:
+          name: sartd-bgp-config-coil-sart-control-plane
+          items:
+          - key: bgp-config-coil-sart-control-plane.yaml
+            path: bgp-config-coil-sart-control-plane.yaml
+      - name: sartd-bgp-config-coil-sart-worker
+        configMap:
+          name: sartd-bgp-config-coil-sart-worker
+          items:
+          - key: bgp-config-coil-sart-worker.yaml
+            path: bgp-config-coil-sart-worker.yaml
+      - name: sartd-bgp-config-coil-sart-worker2
+        configMap:
+          name: sartd-bgp-config-coil-sart-worker2
+          items:
+          - key: bgp-config-coil-sart-worker2.yaml
+            path: bgp-config-coil-sart-worker2.yaml
+      - name: sartd-bgp-config-coil-sart-worker3
+        configMap:
+          name: sartd-bgp-config-coil-sart-worker3
+          items:
+          - key: bgp-config-coil-sart-worker3.yaml
+            path: bgp-config-coil-sart-worker3.yaml

@@ -1,0 +1,25 @@
+resources:
+  - sart.yaml
+namespace: kube-system
+configMapGenerator:
+  - name: sartd-fib-config
+    files:
+      - ./fib-config.yaml
+  - name: sartd-bgp-config-coil-sart-control-plane
+    files:
+      - ./bgp-config-coil-sart-control-plane.yaml
+  - name: sartd-bgp-config-coil-sart-worker
+    files:
+      - ./bgp-config-coil-sart-worker.yaml
+  - name: sartd-bgp-config-coil-sart-worker2
+    files:
+      - ./bgp-config-coil-sart-worker2.yaml
+  - name: sartd-bgp-config-coil-sart-worker3
+    files:
+      - ./bgp-config-coil-sart-worker3.yaml
+images:
+  - name: sart:dev
+    # newName: ghcr.io/terassyi/sart
+    # newTag: 0.0.4
+    newName: sart
+    newTag: dev
