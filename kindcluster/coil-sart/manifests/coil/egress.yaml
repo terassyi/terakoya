@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: egress
+---
+apiVersion: coil.cybozu.com/v2
+kind: Egress
+metadata:
+  annotations:
+  labels:
+    app.kubernetes.io/instance: coil
+  name: nat
+  namespace: egress
+spec:
+  destinations:
+  - 0.0.0.0/0
+  replicas: 2
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 43200

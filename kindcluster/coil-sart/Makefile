@@ -34,6 +34,8 @@ NODE3_ADDR ?= ""
 CLIENT_ADDR ?= ""
 POD_CIDR ?= 10.100.0.0/16
 ESCAPED_POD_CIDR ?= "10.100.0.0\/16"
+EGRESS_CIDR ?= 10.68.0.0/24
+ESCAPED_EGRESS_CIDR ?= "10.68.0.0\/24"
 LB_CIDR ?= 10.69.0.0/24
 ESCAPED_LB_CIDR ?= "10.69.0.0\/24"
 ANOTHER_LB_CIDR ?= 10.69.10.0/24
@@ -60,9 +62,10 @@ start: $(KIND) $(KUBECTL) $(KUSTOMIZE)
 	docker run -d --privileged --network kind --rm --name external-client ghcr.io/terassyi/terakoya:0.1.2 tail -f /dev/null
 
 	make configure
+	$(MAKE) install-sart
 	$(MAKE) install-coil
 
-	# $(KUBECTL) apply -f $(MANIFESTDIR)/pod/test-pod.yaml
+	$(KUBECTL) apply -f $(MANIFESTDIR)/pod/test-pod.yaml
 
 
 .PHONY: configure
@@ -82,6 +85,7 @@ configure:
 		./external-bgp/frr/gobgp.conf.tmpl > ./external-bgp/frr/gobgp.conf
 	
 	sed -e s/POD_CIDR/${ESCAPED_POD_CIDR}/g \
+		-e s/EGRESS_CIDR/${ESCAPED_EGRESS_CIDR}/g \
 		$(MANIFESTDIR)/coil/addresspool.yaml.tmpl > $(MANIFESTDIR)/coil/addresspool.yaml
 
 	docker exec -d external-bgp gobgpd -f /etc/frr/gobgp.conf
@@ -90,6 +94,11 @@ configure:
 	docker exec $(CLUSTER_NAME)-worker ip route add $(POD_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
 	docker exec $(CLUSTER_NAME)-worker2 ip route add $(POD_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
 	docker exec $(CLUSTER_NAME)-worker3 ip route add $(POD_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
+
+	docker exec $(CLUSTER_NAME)-control-plane ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
+	docker exec $(CLUSTER_NAME)-worker ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
+	docker exec $(CLUSTER_NAME)-worker2 ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
+	docker exec $(CLUSTER_NAME)-worker3 ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
 
 
 .PHONY: install
@@ -115,6 +124,7 @@ install-coil: clone-coil-repo
 	$(KUBECTL) apply -f $(MANIFESTDIR)/coil/coil.yaml
 	$(KUBECTL) -n kube-system wait --for=condition=available --timeout=180s deployment/coil-controller
 	$(KUBECTL) apply -f $(MANIFESTDIR)/coil/addresspool.yaml
+	$(KUBECTL) apply -f $(MANIFESTDIR)/coil/egress.yaml
 
 .PHONY: clone-coil-repo
 clone-coil-repo:

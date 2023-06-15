@@ -25,3 +25,15 @@ spec:
       image: ghcr.io/terassyi/terakoya:0.1.2
       command: ["sleep", "infinity"]
 ---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-nat
+  namespace: test
+  annotations:
+    egress.coil.cybozu.com/egress: nat
+spec:
+  containers:
+    - name: test-nat
+      image: ghcr.io/terassyi/terakoya:0.1.2
+      command: ["sleep", "infinity"]
