@@ -1,0 +1,9 @@
+$patch: delete
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: sartd
+    component: bgp
+  name: sartd-bgp
+  namespace: kube-system

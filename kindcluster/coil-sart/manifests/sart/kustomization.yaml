@@ -1,5 +1,7 @@
 resources:
   - sart.yaml
+  - addresspool.yaml
+  - bgp.yaml
 namespace: kube-system
 configMapGenerator:
   - name: sartd-fib-config

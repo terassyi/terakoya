@@ -2,4 +2,9 @@ staticd.conf
 gobgp.conf
 zebra.conf
 manifests/sart/bgp-config*.yaml
+manifests/sart/addresspool.yaml
 manifests/coil/addresspool.yaml
+manifests/sart/bgp.yaml
+manifests/sart/controller/cert.pem
+manifests/sart/controller/key.pem
+manifests/sart/controller/sart-webhook-certificate-patch.yaml

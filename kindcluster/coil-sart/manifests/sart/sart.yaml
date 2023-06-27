@@ -43,8 +43,6 @@ spec:
         - command: ["sartd"]
           args:
             - bgp
-            - -f
-            - /etc/sart/bgp-config-$(NODE_NAME).yaml
             - --fib
             - localhost:5010
           env:

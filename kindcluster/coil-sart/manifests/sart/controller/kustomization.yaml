@@ -1,0 +1,21 @@
+resources:
+  - controller.yaml
+patchesStrategicMerge:
+  - exclude-daemonset.yaml
+  - exclude-certificates-patch.yaml
+  - sart-webhook-certificate-patch.yaml
+  - deployment-patch.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: webhook-server-cert
+  files:
+  - ca.crt=./cert.pem
+  - tls.crt=./cert.pem
+  - tls.key=./key.pem
+  type: "kubernetes.io/tls"
+
+namespace: kube-system
+commonLabels:
+  app.kubernetes.io/name: sart

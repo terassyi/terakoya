@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: egress
+  annotations:
+    coil.cybozu.com/pool: egress
 ---
 apiVersion: coil.cybozu.com/v2
 kind: Egress
@@ -15,7 +17,7 @@ spec:
   destinations:
   - 0.0.0.0/0
   replicas: 2
-  sessionAffinity: ClientIP
-  sessionAffinityConfig:
-    clientIP:
-      timeoutSeconds: 43200
+  template:
+    spec:
+      containers:
+      - name: egress

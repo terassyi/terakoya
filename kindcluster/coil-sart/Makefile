@@ -1,6 +1,6 @@
 CLUSTER_NAME := coil-sart
 
-KIND_VERSION=0.19.0
+KIND_VERSION=0.18.0
 KUBERNETES_VERSION=1.26.4
 KUSTOMIZE_VERSION =5.0.3
 GOBGP_VERSION := 3.15.0
@@ -61,9 +61,12 @@ start: $(KIND) $(KUBECTL) $(KUSTOMIZE)
 	docker run -d --privileged --network kind  --rm --ulimit core=-1 --name external-bgp --volume `pwd`/external-bgp/frr:/etc/frr/ ghcr.io/terassyi/terakoya:0.1.2 tail -f /dev/null
 	docker run -d --privileged --network kind --rm --name external-client ghcr.io/terassyi/terakoya:0.1.2 tail -f /dev/null
 
-	make configure
+	$(MAKE) configure
 	$(MAKE) install-sart
 	$(MAKE) install-coil
+
+	$(KUBECTL) -n kube-system wait --for=condition=available --timeout=180s deployment/sart-controller
+	$(KUSTOMIZE) build $(MANIFESTDIR)/sart | $(KUBECTL) apply -f -
 
 	$(KUBECTL) apply -f $(MANIFESTDIR)/pod/test-pod.yaml
 
@@ -100,6 +103,10 @@ configure:
 	docker exec $(CLUSTER_NAME)-worker2 ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
 	docker exec $(CLUSTER_NAME)-worker3 ip route add $(EGRESS_CIDR) via $(EXTERNAL_BGP_ADDR) dev eth0
 
+	docker exec $(CLUSTER_NAME)-control-plane iptables -t nat -A POSTROUTING -s $(EGRESS_CIDR) -j MASQUERADE 
+	docker exec $(CLUSTER_NAME)-worker iptables -t nat -A POSTROUTING -s $(EGRESS_CIDR) -j MASQUERADE 
+	docker exec $(CLUSTER_NAME)-worker2 iptables -t nat -A POSTROUTING -s $(EGRESS_CIDR) -j MASQUERADE 
+	docker exec $(CLUSTER_NAME)-worker3 iptables -t nat -A POSTROUTING -s $(EGRESS_CIDR) -j MASQUERADE 
 
 .PHONY: install
 install: install-cert-manager
@@ -135,8 +142,13 @@ clone-coil-repo:
 		cd $(TMPDIR); git clone https://github.com/cybozu-go/coil.git; cd coil; git checkout v$(COIL_VERSION); \
     fi
 
+.PHONY: clean-coil
+clean-coil:
+	rm $(MANIFESTDIR)/coil/coil.yaml || true
+	rm $(MANIFESTDIR)/coil/addresspool.yaml || true
+
 .PHONY: install-sart
-install-sart:
+install-sart: install-sart-manifests generate-sart-webhook-certificate
 	$(KIND) load docker-image --name coil-sart sart:dev
 
 	$(eval NODE0_ADDR = $(shell $(KUBECTL) get nodes $(CLUSTER_NAME)-control-plane -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'))
@@ -144,6 +156,13 @@ install-sart:
 	$(eval NODE2_ADDR = $(shell $(KUBECTL) get nodes $(CLUSTER_NAME)-worker2 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'))
 	$(eval NODE3_ADDR = $(shell $(KUBECTL) get nodes $(CLUSTER_NAME)-worker3 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'))
 	$(eval EXTERNAL_BGP_ADDR = $(shell docker inspect external-bgp | jq '.[0].NetworkSettings.Networks.kind.IPAddress' | tr -d '"'))
+
+	sed -e s/LB_CIDR/'${ESCAPED_LB_CIDR}'/g \
+		./manifests/sart/addresspool.yaml.tmpl > ./manifests/sart/addresspool.yaml
+
+	sed -e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g -e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
+		-e s/CLUSTER_NAME/${CLUSTER_NAME}/g \
+		./manifests/sart/bgp.yaml.tmpl > ./manifests/sart/bgp.yaml
 
 	sed -e s/NODE_ASN/${NODE0_ASN}/g \
 		-e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g \
@@ -166,13 +185,48 @@ install-sart:
 		-e s/NODE_ADDR/${NODE3_ADDR}/g \
 		$(MANIFESTDIR)/sart/bgp-config.yaml.tmpl > $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker3.yaml
 
-	$(KUSTOMIZE) build $(MANIFESTDIR)/sart | $(KUBECTL) apply -f -
+	$(KUSTOMIZE) build $(MANIFESTDIR)/sart/controller | $(KUBECTL) apply -f -
+
+.PHONY: install-sart-manifests
+install-sart-manifests:
+	curl -sfL -o $(MANIFESTDIR)/sart/controller/controller.yaml https://github.com/terassyi/sart/releases/download/v$(SART_VERSION)/sart-controller.yaml
+
+.PHONY: clean-sart
+clean-sart:
+	rm $(MANIFESTDIR)/sart/bgp.yaml || true
+	rm $(MANIFESTDIR)/sart/addresspool.yaml || true
+	rm $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-control-plane.yaml || true
+	rm $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker.yaml || true
+	rm $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker2.yaml || true
+	rm $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker3.yaml || true
+
+.PHONY: generate-sart-webhook-certificate
+generate-sart-webhook-certificate: install-gencert $(MANIFESTDIR)/sart/controller/key.pem $(MANIFESTDIR)/sart/controller/sart-webhook-certificate-patch.yaml
+
+.PHONY: install-gencert
+install-gencert:
+	go install github.com/cybozu-go/coil/v2/cmd/gencert@v$(COIL_VERSION)
+
+$(MANIFESTDIR)/sart/controller/key.pem:
+	gencert --host webhook-service.kube-system.svc --outdir $(MANIFESTDIR)/sart/controller
+
+$(MANIFESTDIR)/sart/controller/sart-webhook-certificate-patch.yaml: $(MANIFESTDIR)/sart/controller/cert.pem $(MANIFESTDIR)/sart/controller/sart-webhook-certificate-patch.yaml.tmpl
+	sed "s/%CACERT%/$$(base64 -w0 < $<)/g" $@.tmpl > $@
+
+.PHONY: clean-sart-webhook-certificate
+clean-sart-webhook-certificate:
+	rm $(MANIFESTDIR)/sart/controller/cert.pem || true
+	rm $(MANIFESTDIR)/sart/controller/key.pem || true
+	rm $(MANIFESTDIR)/sart/controller/sart-webhook-certificate-patch.yaml || true
 
 .PHONY: stop
-stop: $(KIND)
+stop: $(KIND) clean
 	$(KIND) delete cluster --name $(CLUSTER_NAME)
 	docker rm -f external-bgp
 	docker rm -f external-client
+
+.PHONY: clean
+clean: clean-coil clean-sart clean-sart-webhook-certificate
 
 .PHONY: logs
 logs:
