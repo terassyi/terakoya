@@ -65,26 +65,11 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
-          volumeMounts:
-            - name: sartd-bgp-config-coil-sart-control-plane
-              mountPath: /etc/sart/bgp-config-coil-sart-control-plane.yaml
-              subPath: bgp-config-coil-sart-control-plane.yaml
-            - name: sartd-bgp-config-coil-sart-worker
-              mountPath: /etc/sart/bgp-config-coil-sart-worker.yaml
-              subPath: bgp-config-coil-sart-worker.yaml
-            - name: sartd-bgp-config-coil-sart-worker2
-              mountPath: /etc/sart/bgp-config-coil-sart-worker2.yaml
-              subPath: bgp-config-coil-sart-worker2.yaml
-            - name: sartd-bgp-config-coil-sart-worker3
-              mountPath: /etc/sart/bgp-config-coil-sart-worker3.yaml
-              subPath: bgp-config-coil-sart-worker3.yaml
       hostNetwork: true
       nodeSelector:
         kubernetes.io/os: linux
       tolerations:
         - effect: NoSchedule
-          operator: Exists
-        - effect: NoExecute
           operator: Exists
       # serviceAccountName: sartd
       terminationGracePeriodSeconds: 2
@@ -95,27 +80,3 @@ spec:
           items:
           - key: fib-config.yaml
             path: fib-config.yaml
-      - name: sartd-bgp-config-coil-sart-control-plane
-        configMap:
-          name: sartd-bgp-config-coil-sart-control-plane
-          items:
-          - key: bgp-config-coil-sart-control-plane.yaml
-            path: bgp-config-coil-sart-control-plane.yaml
-      - name: sartd-bgp-config-coil-sart-worker
-        configMap:
-          name: sartd-bgp-config-coil-sart-worker
-          items:
-          - key: bgp-config-coil-sart-worker.yaml
-            path: bgp-config-coil-sart-worker.yaml
-      - name: sartd-bgp-config-coil-sart-worker2
-        configMap:
-          name: sartd-bgp-config-coil-sart-worker2
-          items:
-          - key: bgp-config-coil-sart-worker2.yaml
-            path: bgp-config-coil-sart-worker2.yaml
-      - name: sartd-bgp-config-coil-sart-worker3
-        configMap:
-          name: sartd-bgp-config-coil-sart-worker3
-          items:
-          - key: bgp-config-coil-sart-worker3.yaml
-            path: bgp-config-coil-sart-worker3.yaml

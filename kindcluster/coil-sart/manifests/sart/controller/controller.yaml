@@ -961,7 +961,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: ghcr.io/terassyi/sart-controller:0.0.4
+        image: ghcr.io/terassyi/sart-controller:0.0.5
         livenessProbe:
           httpGet:
             path: /healthz
@@ -1037,7 +1037,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        image: ghcr.io/terassyi/sart:0.0.4
+        image: ghcr.io/terassyi/sart:0.0.5
         imagePullPolicy: IfNotPresent
         name: sartd
         securityContext:

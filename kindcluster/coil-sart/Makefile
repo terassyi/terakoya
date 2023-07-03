@@ -6,7 +6,7 @@ KUSTOMIZE_VERSION =5.0.3
 GOBGP_VERSION := 3.15.0
 CERT_MANAGER_VERSION := 1.12.1
 COIL_VERSION ?= 2.3.0
-SART_VERSION ?= 0.0.4
+SART_VERSION ?= 0.0.5
 
 SUDO ?= sudo
 
@@ -21,6 +21,7 @@ export KUBECTL
 
 KIND_CONFIG = kind-config.yaml
 
+NODES ?= 4
 EXTERNAL_BGP_ASN ?= 65000
 NODE0_ASN ?= 65000
 NODE1_ASN ?= 65000
@@ -68,7 +69,9 @@ start: $(KIND) $(KUBECTL) $(KUSTOMIZE)
 	$(KUBECTL) -n kube-system wait --for=condition=available --timeout=180s deployment/sart-controller
 	$(KUSTOMIZE) build $(MANIFESTDIR)/sart | $(KUBECTL) apply -f -
 
-	$(KUBECTL) apply -f $(MANIFESTDIR)/pod/test-pod.yaml
+	$(KUBECTL) -n kube-system wait --for=jsonpath={.status.numberAvailable}=$(NODES) --timeout=180s daemonset/sartd
+	
+	$(KUSTOMIZE) build $(MANIFESTDIR)/resources | $(KUBECTL) apply -f -
 
 
 .PHONY: configure
@@ -149,7 +152,6 @@ clean-coil:
 
 .PHONY: install-sart
 install-sart: install-sart-manifests generate-sart-webhook-certificate
-	$(KIND) load docker-image --name coil-sart sart:dev
 
 	$(eval NODE0_ADDR = $(shell $(KUBECTL) get nodes $(CLUSTER_NAME)-control-plane -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'))
 	$(eval NODE1_ADDR = $(shell $(KUBECTL) get nodes $(CLUSTER_NAME)-worker -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'))
@@ -163,27 +165,6 @@ install-sart: install-sart-manifests generate-sart-webhook-certificate
 	sed -e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g -e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
 		-e s/CLUSTER_NAME/${CLUSTER_NAME}/g \
 		./manifests/sart/bgp.yaml.tmpl > ./manifests/sart/bgp.yaml
-
-	sed -e s/NODE_ASN/${NODE0_ASN}/g \
-		-e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g \
-		-e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
-		-e s/NODE_ADDR/${NODE0_ADDR}/g \
-		$(MANIFESTDIR)/sart/bgp-config.yaml.tmpl > $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-control-plane.yaml
-	sed -e s/NODE_ASN/${NODE1_ASN}/g \
-		-e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g \
-		-e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
-		-e s/NODE_ADDR/${NODE1_ADDR}/g \
-		$(MANIFESTDIR)/sart/bgp-config.yaml.tmpl > $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker.yaml
-	sed -e s/NODE_ASN/${NODE2_ASN}/g \
-		-e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g \
-		-e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
-		-e s/NODE_ADDR/${NODE2_ADDR}/g \
-		$(MANIFESTDIR)/sart/bgp-config.yaml.tmpl > $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker2.yaml
-	sed -e s/NODE_ASN/${NODE3_ASN}/g \
-		-e s/EXTERNAL_BGP_ASN/${EXTERNAL_BGP_ASN}/g \
-		-e s/EXTERNAL_BGP_ADDR/${EXTERNAL_BGP_ADDR}/g \
-		-e s/NODE_ADDR/${NODE3_ADDR}/g \
-		$(MANIFESTDIR)/sart/bgp-config.yaml.tmpl > $(MANIFESTDIR)/sart/bgp-config-$(CLUSTER_NAME)-worker3.yaml
 
 	$(KUSTOMIZE) build $(MANIFESTDIR)/sart/controller | $(KUBECTL) apply -f -
 
