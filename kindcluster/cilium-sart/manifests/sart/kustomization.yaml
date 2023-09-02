@@ -1,0 +1,4 @@
+resources:
+  - addresspool.yaml
+  - bgp.yaml
+namespace: kube-system

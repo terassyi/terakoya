@@ -69,6 +69,8 @@ if dein#load_state('$HOME/.cache/dein')
                 call dein#add ('chriskempson/base16-vim')
 
                 call dein#add('brglng/vim-im-select')
+
+				call dein#add('justmao945/vim-clang')
         call dein#end()
 endif
 

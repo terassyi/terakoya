@@ -45,6 +45,7 @@ spec:
             - bgp
             - --fib
             - localhost:5010
+            - -l=debug
           env:
             - name: SARTD_BGP_NODE_IP
               valueFrom:
@@ -54,6 +55,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: RUST_BACKTRACE
+              value: "1"
           image: sart:dev
           imagePullPolicy: IfNotPresent
           name: bgp

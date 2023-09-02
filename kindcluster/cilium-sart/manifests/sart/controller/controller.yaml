@@ -1,0 +1,1153 @@
+# Warning: 'patchesStrategicMerge' is deprecated. Please use 'patches' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+# Warning: 'vars' is deprecated. Please use 'replacements' instead. [EXPERIMENTAL] Run 'kustomize edit fix' to update your Kustomization automatically.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: addresspools.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: AddressPool
+    listKind: AddressPoolList
+    plural: addresspools
+    singular: addresspool
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.cidrs[*].prefix
+      name: CIDR
+      type: string
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.disable
+      name: Disabled
+      type: boolean
+    - jsonPath: .status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AddressPool is the Schema for the addresspools API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AddressPoolSpec defines the desired state of AddressPool
+            properties:
+              cidrs:
+                items:
+                  properties:
+                    prefix:
+                      type: string
+                    protocol:
+                      enum:
+                      - ipv4
+                      - ipv6
+                      type: string
+                  required:
+                  - prefix
+                  type: object
+                minItems: 1
+                type: array
+              disable:
+                default: false
+                type: boolean
+              type:
+                enum:
+                - cluster
+                - namespaced
+                - lb
+                type: string
+            required:
+            - cidrs
+            - type
+            type: object
+          status:
+            description: AddressPoolStatus defines the observed state of AddressPool
+            type: string
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: addressrequests.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: AddressRequest
+    listKind: AddressRequestList
+    plural: addressrequests
+    singular: addressrequest
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AddressRequest is the Schema for the addressrequests API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AddressRequestSpec defines the desired state of AddressRequest
+            properties:
+              kind:
+                type: string
+              protocol:
+                default: ipv4
+                enum:
+                - ipv4
+                - ipv6
+                type: string
+            required:
+            - kind
+            type: object
+          status:
+            description: AddressRequestStatus defines the observed state of AddressRequest
+            properties:
+              conditions:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: bgpadvertisements.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: BGPAdvertisement
+    listKind: BGPAdvertisementList
+    plural: bgpadvertisements
+    singular: bgpadvertisement
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.network
+      name: Network
+      type: string
+    - jsonPath: .spec.serviceType
+      name: Type
+      type: string
+    - jsonPath: .status.condition
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BGPAdvertisement is the Schema for the bgpadvertisements API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BGPAdvertisementSpec defines the desired state of BGPAdvertisement
+            properties:
+              localPref:
+                format: int32
+                type: integer
+              network:
+                type: string
+              nodes:
+                items:
+                  type: string
+                type: array
+              origin:
+                default: igp
+                enum:
+                - egp
+                - igp
+                - incomplete
+                type: string
+              protocol:
+                default: ipv4
+                enum:
+                - ipv4
+                - ipv6
+                type: string
+              type:
+                default: pod
+                enum:
+                - service
+                - pod
+                type: string
+            required:
+            - network
+            - type
+            type: object
+          status:
+            default:
+              condition: Unavailable
+            description: BGPAdvertisementStatus defines the observed state of BGPAdvertisement
+            properties:
+              condition:
+                default: Unavailable
+                type: string
+            required:
+            - condition
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: bgppeers.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: BGPPeer
+    listKind: BGPPeerList
+    plural: bgppeers
+    singular: bgppeer
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Local speaker
+      jsonPath: .spec.node
+      name: Node
+      type: string
+    - description: AS Number
+      jsonPath: .spec.peerAsn
+      name: PeerASN
+      type: integer
+    - description: Router Id
+      jsonPath: .spec.peerRouterId
+      name: PeerRouterId
+      type: string
+    - jsonPath: .status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BGPPeer is the Schema for the bgppeers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BGPPeerSpec defines the desired state of BGPPeer
+            properties:
+              advertisements:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    prefix:
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  - prefix
+                  type: object
+                type: array
+              family:
+                default:
+                  afi: ipv4
+                  safi: unicast
+                properties:
+                  afi:
+                    default: ipv4
+                    enum:
+                    - ipv4
+                    - ipv6
+                    type: string
+                  safi:
+                    default: unicast
+                    enum:
+                    - unicast
+                    - multicast
+                    type: string
+                required:
+                - afi
+                - safi
+                type: object
+              localAsn:
+                format: int32
+                maximum: 4294967295
+                minimum: 0
+                type: integer
+              localRouterId:
+                type: string
+              node:
+                type: string
+              peerAsn:
+                format: int32
+                maximum: 4294967295
+                minimum: 0
+                type: integer
+              peerRouterId:
+                type: string
+            required:
+            - peerAsn
+            - peerRouterId
+            type: object
+          status:
+            default: Idle
+            enum:
+            - Idle
+            - Connect
+            - Active
+            - OpenSent
+            - OpenConfirm
+            - Established
+            type: string
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: clusterbgps.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: ClusterBGP
+    listKind: ClusterBGPList
+    plural: clusterbgps
+    singular: clusterbgp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterBGP is the Schema for the clusterbgps API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterBGPSpec defines the desired state of ClusterBGP
+            properties:
+              nodes:
+                items:
+                  description: NodeBGP is the Schema for the nodebgps API
+                  properties:
+                    apiVersion:
+                      description: 'APIVersion defines the versioned schema of this
+                        representation of an object. Servers should convert recognized
+                        schemas to the latest internal value, and may reject unrecognized
+                        values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                      type: string
+                    kind:
+                      description: 'Kind is a string value representing the REST resource
+                        this object represents. Servers may infer this from the endpoint
+                        the client submits requests to. Cannot be updated. In CamelCase.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                      type: string
+                    metadata:
+                      type: object
+                    spec:
+                      description: NodeBGPSpec defines the desired state of NodeBGP
+                      properties:
+                        asn:
+                          format: int32
+                          maximum: 4294967295
+                          minimum: 0
+                          type: integer
+                        endpoint:
+                          type: string
+                        peers:
+                          items:
+                            properties:
+                              asn:
+                                format: int32
+                                type: integer
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              routerId:
+                                type: string
+                              status:
+                                enum:
+                                - Idle
+                                - Connect
+                                - Active
+                                - OpenSent
+                                - OpenConfirm
+                                - Established
+                                type: string
+                            required:
+                            - asn
+                            - name
+                            - namespace
+                            - routerId
+                            - status
+                            type: object
+                          type: array
+                        routerId:
+                          type: string
+                      required:
+                      - asn
+                      - routerId
+                      type: object
+                    status:
+                      description: NodeBGPStatus defines the observed state of NodeBGP
+                      type: string
+                  type: object
+                type: array
+              peeringPolicy:
+                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                  Important: Run "make" to regenerate code after modifying this file'
+                properties:
+                  policy:
+                    default: none
+                    type: string
+                type: object
+            type: object
+          status:
+            description: ClusterBGPStatus defines the observed state of ClusterBGP
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: nodebgps.sart.terassyi.net
+spec:
+  group: sart.terassyi.net
+  names:
+    kind: NodeBGP
+    listKind: NodeBGPList
+    plural: nodebgps
+    singular: nodebgp
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: AS Number
+      jsonPath: .spec.asn
+      name: ASN
+      type: integer
+    - description: Router Id
+      jsonPath: .spec.routerId
+      name: RouterId
+      type: string
+    - jsonPath: .status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NodeBGP is the Schema for the nodebgps API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NodeBGPSpec defines the desired state of NodeBGP
+            properties:
+              asn:
+                format: int32
+                maximum: 4294967295
+                minimum: 0
+                type: integer
+              endpoint:
+                type: string
+              peers:
+                items:
+                  properties:
+                    asn:
+                      format: int32
+                      type: integer
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    routerId:
+                      type: string
+                    status:
+                      enum:
+                      - Idle
+                      - Connect
+                      - Active
+                      - OpenSent
+                      - OpenConfirm
+                      - Established
+                      type: string
+                  required:
+                  - asn
+                  - name
+                  - namespace
+                  - routerId
+                  - status
+                  type: object
+                type: array
+              routerId:
+                type: string
+            required:
+            - asn
+            - routerId
+            type: object
+          status:
+            description: NodeBGPStatus defines the observed state of NodeBGP
+            type: string
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: v1
+automountServiceAccountToken: true
+kind: ServiceAccount
+metadata:
+  name: sart-controller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: clusterbgp-editor-role
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: controller
+  name: clusterbgp-editor-role
+rules:
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: clusterbgp-viewer-role
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: controller
+  name: clusterbgp-viewer-role
+rules:
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: sart-controller
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addresspools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addresspools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addresspools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addressrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addressrequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - addressrequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgpadvertisements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgpadvertisements/finalizers
+  verbs:
+  - create
+  - delete
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgpadvertisements/status
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgppeer/status
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgppeers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgppeers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - bgppeers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - clusterbgps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - nodebgps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - nodebgps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sart.terassyi.net
+  resources:
+  - nodebgps/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sart-controller-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sart-controller
+subjects:
+- kind: ServiceAccount
+  name: sart-controller
+  namespace: kube-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: webhook-service
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: controller
+  name: webhook-service
+  namespace: kube-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: sart-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: sart-controller
+  name: sart-controller
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: sart-controller
+  template:
+    metadata:
+      labels:
+        control-plane: sart-controller
+    spec:
+      containers:
+      - command:
+        - /manager
+        image: ghcr.io/terassyi/sart-controller:0.0.5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: sart-controller
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext:
+        runAsNonRoot: false
+      serviceAccountName: sart-controller
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: sartd
+    component: bgp
+  name: sartd-bgp
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: sartd
+      component: bgp
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "7472"
+        prometheus.io/scrape: "true"
+      labels:
+        app: sartd
+        component: bgp
+    spec:
+      containers:
+      - args:
+        - bgp
+        command:
+        - sartd
+        env:
+        - name: SARTD_BGP_NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        image: ghcr.io/terassyi/sart:0.0.5
+        imagePullPolicy: IfNotPresent
+        name: sartd
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_RAW
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      terminationGracePeriodSeconds: 2
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: controller
+  name: serving-cert
+  namespace: kube-system
+spec:
+  dnsNames:
+  - webhook-service.kube-system.svc
+  - webhook-service.kube-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: selfsigned-issuer
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: issuer
+    app.kubernetes.io/part-of: controller
+  name: selfsigned-issuer
+  namespace: kube-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: kube-system/serving-cert
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/instance: validating-webhook-configuration
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: validatingwebhookconfiguration
+    app.kubernetes.io/part-of: controller
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: kube-system
+      path: /validate-sart-terassyi-net-v1alpha1-bgpadvertisement
+  failurePolicy: Fail
+  name: vbgpadvertisement.kb.io
+  rules:
+  - apiGroups:
+    - sart.terassyi.net
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bgpadvertisements
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: kube-system
+      path: /validate-sart-terassyi-net-v1alpha1-nodebgp
+  failurePolicy: Fail
+  name: vnodebgp.kb.io
+  rules:
+  - apiGroups:
+    - sart.terassyi.net
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nodebgps
+  sideEffects: None
