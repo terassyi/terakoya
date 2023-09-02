@@ -1,0 +1,117 @@
+# python installed on remote
+ansible_python_interpreter: /usr/bin/python3
+
+go:
+  version: 1.20.4
+  arch: linux-amd64
+
+### Kubernetes configuration
+kubernetes:
+  ### cluster name
+  clusterName: terakoya
+  ### list of main Kubernetes component
+  components:
+    master:
+      ### disable scheduling workload to master
+      noSchedule: false
+    APIServer:
+      ### additional IP that can be included in the API Server CA
+      ### this useful when you run Kubernetes behind a proxy
+      ### add IP or domain with comma separated
+      additionalIP: "172.16.0.10,kubernetes.terassyi.net"
+    cri:
+      version: v1.22.0
+    cni:
+      version: v1.1.1
+    etcd:
+      version: v3.5.4
+    runc:
+      version: v1.1.3
+    containerd:
+      version: 1.6.6
+    # encrypt stored resources in etcd
+    encryptionProvider:
+      # supported provider is aescbc, secretbox, and aesgcm
+      provider: aescbc
+      # Kubernetes resources encrypted
+      resources:
+        - secret
+      # 32 byte random key and base64 encode
+      # generate with command
+      # head -c 32 /dev/urandom | base64
+      # please regenerate this
+      key: cX8Sc/yHkp2/3ETHcgFQ/sd/KU/pziqeQFfKWYd17nM=
+  ### list of addons Kubernetes component
+  addonsComponents:
+    ### Kubernetes cluster will use different resolv.conf
+    ### with the node
+    coredns:
+      nameservers:
+        - 172.30.0.3
+      version: 1.10.1
+    ### flannel interface, most Kubernetes installation using
+    ### single interface, this enabled to use different interface
+    ### TODO: support flannel tunneling on different interface as API
+    flannel:
+      interface: eth1
+      version: v0.18.1
+    ### enabled metrics server
+    metricsServer:
+      enabled: true
+      version: v0.6.1
+    ### enabled oidc
+    oidc:
+      enabled: true
+      ### your OIDC identity provider URL
+      issuerURL: https://keycloak.zufar.io:8443/auth/realms/IAM
+      ### your client ID from identity provider
+      clientID: kubernetes
+      ### information for group Kubernetes in JWT token
+      groupsClaim: user_groups
+      ### adding prefix in front of groupsClaim
+      groupsPrefix: "oidc:"
+      ### information for user Kubernetes in JWT token
+      usernameClaim: preferred_username
+      ### adding prefix in front of usernameClaim
+      usernamePrefix: "oidc:"
+  certificate:
+    ### directory created in deployer node for certificate (full path)
+    directory: /home/vagrant/kubernetes-certificate
+  ### number of Kubernetes master
+  masterNumber: 1
+  version: v1.27.2
+
+tools:
+  cfssl:
+    version: 1.6.4
+
+### Infrastructure configuration
+infrastructure:
+  ca:
+    ### root CA expired time (20 year)
+    expireTime: 175200h
+    ### intermediate CA expired time (10 year)
+    intermediateExpireTime: 87600h
+    ### certificate expired time (1 year)
+    certificate:
+      expireTime: 8760h
+    city: Japan
+    country: ID
+    organizationUnit: Kubernetes
+    province: Japan
+  keepalived:
+    ### IP of one of the Kubernetes master
+    ### this will be the default master for keepalived
+    masterIP: 10.200.100.10
+    ### Keepalived interface
+    ### mostly using interface where the API listen
+    interface: eth1
+    ### Keepalived routerID
+    routerID: 50
+    ### Virtual IP for Kubernetes API
+    virtualIP: 10.200.100.100
+    ### Virtual Port for Kubernetes API
+    virtualIPPort: 64430
+
+### user on all nodes
+user: vagrant

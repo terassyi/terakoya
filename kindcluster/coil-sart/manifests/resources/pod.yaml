@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test1
+  namespace: test
+spec:
+  containers:
+    - name: test
+      image: ghcr.io/terassyi/terakoya:0.1.2
+      command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test2
+  namespace: test
+spec:
+  containers:
+    - name: test
+      image: ghcr.io/terassyi/terakoya:0.1.2
+      command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-nat
+  namespace: test
+  annotations:
+    egress.coil.cybozu.com/egress: nat
+spec:
+  containers:
+    - name: test-nat
+      image: ghcr.io/terassyi/terakoya:0.1.2
+      command: ["sleep", "infinity"]

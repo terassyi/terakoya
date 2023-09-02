@@ -1,0 +1,58 @@
+# coding: utf-8
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+os = "generic/ubuntu2204"
+
+vm_spec = [
+  {
+    name: "ext",
+    cpu: 2,
+    memory: 2048,
+    box: os,
+    private_ip: "172.16.0.100",
+  },
+  {
+    name: "tm1",
+    cpu: 2,
+    memory: 2048,
+    box: os,
+    private_ip: "172.16.0.10",
+  },
+  {
+    name: "tw1",
+    cpu: 2,
+    memory: 2048,
+    box: os,
+    private_ip: "172.16.0.11",
+  },
+  {
+    name: "tw2",
+    cpu: 2,
+    memory: 2048,
+    box: os,
+    private_ip: "172.16.0.12",
+  },
+]
+
+Vagrant.configure("2") do |config|
+  vm_spec.each do |spec|
+    config.vm.define spec[:name] do |v|
+      v.vm.box = spec[:box]
+      v.vm.hostname = spec[:name]
+      v.vm.network :private_network,ip: spec[:private_ip]
+      v.vm.provider :libvirt do |libvirt|
+        libvirt.driver = "qemu"
+        libvirt.connect_via_ssh = false
+      end
+    end
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    # disable swap
+    swapoff -a
+    sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+    sed -i '/ swap / s/^\\(.*\\)$/#\\1/g' /etc/fstab
+  SHELL
+end

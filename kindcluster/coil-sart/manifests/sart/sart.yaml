@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: sartd
+    component: sartd
+  name: sartd
+spec:
+  selector:
+    matchLabels:
+      app: sartd
+      component: sartd
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "7472"
+        prometheus.io/scrape: "true"
+      labels:
+        app: sartd
+        component: sartd
+    spec:
+      containers:
+        - name: fib
+          image: sart:dev
+          imagePullPolicy: IfNotPresent
+          command: ["sartd"]
+          args:
+            - fib
+            - -f
+            - /etc/sart/fib-config.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_RAW
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: sartd-fib-config
+              mountPath: /etc/sart/fib-config.yaml
+              subPath: fib-config.yaml
+        - command: ["sartd"]
+          args:
+            - bgp
+            - --fib
+            - localhost:5010
+            - -l=debug
+          env:
+            - name: SARTD_BGP_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: RUST_BACKTRACE
+              value: "1"
+          image: sart:dev
+          imagePullPolicy: IfNotPresent
+          name: bgp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_RAW
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      # serviceAccountName: sartd
+      terminationGracePeriodSeconds: 2
+      volumes:
+      - name: sartd-fib-config
+        configMap:
+          name: sartd-fib-config
+          items:
+          - key: fib-config.yaml
+            path: fib-config.yaml

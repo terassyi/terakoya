@@ -1,0 +1,121 @@
+- name: Create CA certificates directory
+  file:
+    path: "{{ item.path }}"
+    state: directory
+  with_items:
+    - { path: '{{ kubernetes.certificate.directory }}/templates'}
+    - { path: '{{ kubernetes.certificate.directory }}/ca'}
+    - { path: '{{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca'}
+    - { path: '{{ kubernetes.certificate.directory }}/intermediates/etcd-ca'}
+    - { path: '{{ kubernetes.certificate.directory }}/intermediates/kubernetes-front-proxy-ca'}
+    - { path: '{{ kubernetes.certificate.directory }}/intermediates/kubernetes-service-account-namagement-ca'}
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Copy CA template
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: 'ca-csr.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/ca-csr.json' }
+    - { src: 'ca-config.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/ca-config.json' }
+    - { src: 'kubernetes-ca-csr.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/kubernetes-ca-csr.json' }
+    - { src: 'etcd-ca-csr.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/etcd-ca-csr.json' }
+    - { src: 'kubernetes-front-proxy-ca-csr.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/kubernetes-front-proxy-ca-csr.json' }
+    - { src: 'kubernetes-service-account-management-ca-csr.json.j2', dest: '{{ kubernetes.certificate.directory }}/templates/kubernetes-service-account-management-ca-csr.json' }
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Generate root CA
+  shell: cfssl gencert -initca {{ kubernetes.certificate.directory }}/templates/ca-csr.json | cfssljson -bare ca
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}/ca/"
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Generate intermediate kubernetes-ca
+  shell: |
+    cfssl gencert \
+    -ca={{ kubernetes.certificate.directory }}/ca/ca.pem \
+    -ca-key={{ kubernetes.certificate.directory }}/ca/ca-key.pem \
+    -config={{ kubernetes.certificate.directory }}/templates/ca-config.json \
+    -profile=intermediate \
+    {{ kubernetes.certificate.directory }}/templates/kubernetes-ca-csr.json | cfssljson -bare kubernetes-ca
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca"
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Generate intermediate etcd-ca 
+  shell: |
+    cfssl gencert \
+    -ca={{ kubernetes.certificate.directory }}/ca/ca.pem \
+    -ca-key={{ kubernetes.certificate.directory }}/ca/ca-key.pem \
+    -config={{ kubernetes.certificate.directory }}/templates/ca-config.json \
+    -profile=intermediate \
+    {{ kubernetes.certificate.directory }}/templates/etcd-ca-csr.json | cfssljson -bare etcd-ca
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}/intermediates/etcd-ca"
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Generate intermediate kubernetes-front-proxy-ca
+  shell: |
+    cfssl gencert \
+    -ca={{ kubernetes.certificate.directory }}/ca/ca.pem \
+    -ca-key={{ kubernetes.certificate.directory }}/ca/ca-key.pem \
+    -config={{ kubernetes.certificate.directory }}/templates/ca-config.json \
+    -profile=intermediate \
+    {{ kubernetes.certificate.directory }}/templates/kubernetes-front-proxy-ca-csr.json | cfssljson -bare kubernetes-front-proxy-ca
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}/intermediates/kubernetes-front-proxy-ca"
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Generate intermediate kubernetes-service-account-management-ca
+  shell: |
+    cfssl gencert \
+    -ca={{ kubernetes.certificate.directory }}/ca/ca.pem \
+    -ca-key={{ kubernetes.certificate.directory }}/ca/ca-key.pem \
+    -config={{ kubernetes.certificate.directory }}/templates/ca-config.json \
+    -profile=intermediate \
+    {{ kubernetes.certificate.directory }}/templates/kubernetes-service-account-management-ca-csr.json | cfssljson -bare kubernetes-service-account-management-ca
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}/intermediates/kubernetes-service-account-management-ca"
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Copy intermediete CA certificate into master node
+  vars:
+    etcd_ip: "{{ groups['etcd'] | join(' ') }}"
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}"
+  shell: |
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/etcd-ca/etcd-ca.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/etcd-ca/etcd-ca-key.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/etcd-ca/etcd-ca.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca/kubernetes-ca.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca/kubernetes-ca-key.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-front-proxy-ca/kubernetes-front-proxy-ca.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-service-account-management-ca/kubernetes-service-account-management-ca.pem tm1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-service-account-management-ca/kubernetes-service-account-management-ca-key.pem tm1:~/
+  tags:
+    - generate-certificates
+    - generate-ca-certificates
+
+- name: Copy intermediete CA certificate into worker nodes
+  args:
+    chdir: "{{ kubernetes.certificate.directory }}"
+  shell: |
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca/kubernetes-ca.pem tw1:~/
+    scp -F ./ssh.config {{ kubernetes.certificate.directory }}/intermediates/kubernetes-ca/kubernetes-ca.pem tw2:~/
+  tags:
+    - generate-certificates
+    - generate-ca-certificates

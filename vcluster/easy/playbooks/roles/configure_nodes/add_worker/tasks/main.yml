@@ -1,0 +1,6 @@
+---
+- name: gather os facts
+  ansible.builtin.gather_facts:
+
+- name: add worker nodes to cluster
+  shell: "kubeadm join {{ controlplane_endpoint }}:6443 --token {{token}} --discovery-token-ca-cert-hash sha256:{{ca_cert}}"

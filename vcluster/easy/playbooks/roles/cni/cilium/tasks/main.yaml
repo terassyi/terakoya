@@ -1,0 +1,23 @@
+---
+# - name: mount cgroupv2
+#   become: yes
+#   shell: mount -t cgroup2 none /sys/fs/cgroup
+
+- name: copy Cilium manifests from local
+  become: yes
+  copy:
+    remote_src: false
+    src: cilium.yaml
+    dest: /home/{{ user }}/cilium.yaml
+
+- name: deploy Cilium
+  become: false
+  shell: kubectl apply -f /home/{{ user }}/cilium.yaml
+  delegate_to: "{{ groups.master[0] }}"
+  run_once: true
+
+- name: wait node-ready
+  import_role:
+    # name: cni/wait
+    name: configure_nodes/wait_node_ready 
+

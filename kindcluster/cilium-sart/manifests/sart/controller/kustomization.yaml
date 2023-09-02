@@ -1,0 +1,9 @@
+resources:
+  - controller.yaml
+namespace: kube-system
+images:
+  - name: ghcr.io/terassyi/sart:0.0.5
+    # newName: ghcr.io/terassyi/sart
+    # newTag: 0.0.5
+    newName: sart
+    newTag: dev

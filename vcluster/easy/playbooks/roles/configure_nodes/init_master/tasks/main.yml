@@ -1,0 +1,34 @@
+---
+- name: create kubeadm-configure YAML file
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: "/home/{{ user }}/kubeadm-config.yaml"
+
+- name: execute kubeadm init
+  vars:
+    host_address: "{{ ansible_facts.eth1.ipv4.address }}"
+  shell: kubeadm init --config "/home/{{ user }}/kubeadm-config.yaml" --upload-certs
+  when: kube_proxy_enabled
+
+- name: execute kubeadm init without kube-proxy
+  vars:
+    host_address: "{{ ansible_facts.eth1.ipv4.address }}"
+  shell: kubeadm init --config "/home/{{ user }}/kubeadm-config.yaml" --upload-certs --skip-phases=addon/kube-proxy
+  when: not kube_proxy_enabled
+
+- name: create $HOME/.kube directory
+  file:
+    path: "/home/{{ user }}/.kube/"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_env.SUDO_USER }}"
+    group: "{{ ansible_env.SUDO_USER }}"
+
+- name: copy admin.conf to $HOME/.kube/config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ user }}/.kube/config"
+    owner: "{{ ansible_env.SUDO_USER }}"
+    group: "{{ ansible_env.SUDO_USER }}"
+    mode: '0600'
+    remote_src: true

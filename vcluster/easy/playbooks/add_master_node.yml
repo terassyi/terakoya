@@ -1,0 +1,22 @@
+---
+- hosts: master[0]
+  gather_facts: false
+  become: true
+  roles:
+    - configure_nodes/create_certs_key
+    - configure_nodes/create_token
+
+- hosts: master, !master[0]
+  gather_facts: false
+  become: true
+  roles:
+    - configure_nodes/add_master
+
+- hosts: master[0]
+  gather_facts: false
+  become: false
+  vars:
+    wait_target_nodes: "{{groups.master | difference(groups.master[0])}}"
+  roles:
+    - configure_nodes/wait_node_ready
+    - configure_nodes/delete_token

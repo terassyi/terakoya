@@ -1,0 +1,17 @@
+apiVersion: coil.cybozu.com/v2
+kind: AddressPool
+metadata:
+  name: default
+spec:
+  blockSizeBits: 5
+  subnets:
+    - ipv4: POD_CIDR
+---
+apiVersion: coil.cybozu.com/v2
+kind: AddressPool
+metadata:
+  name: egress
+spec:
+  blockSizeBits: 0
+  subnets:
+    - ipv4: EGRESS_CIDR
