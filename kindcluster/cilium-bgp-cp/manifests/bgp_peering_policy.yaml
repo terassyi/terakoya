@@ -1,0 +1,108 @@
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: control-plane
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-bgp-cp-control-plane
+  virtualRouters:
+  - localASN: 65001
+    # exportPodCIDR: true
+    serviceSelector:
+      matchExpressions:
+        - operator: NotIn
+          key: dummy
+          values:
+            - dummy
+    neighbors:
+    - peerAddress: "169.254.1.1/32"
+      peerASN: 65000
+      connectRetryTimeSeconds: 120
+      holdTimeSeconds: 30
+      keepAliveTimeSeconds: 30
+      gracefulRestart:
+        enabled: true
+        restartTimeSeconds: 120
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: worker
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-bgp-cp-worker
+  virtualRouters:
+  - localASN: 65002
+    # exportPodCIDR: true
+    serviceSelector:
+      matchExpressions:
+        - operator: NotIn
+          key: dummy
+          values:
+            - dummy
+    neighbors:
+    - peerAddress: "169.254.2.1/32"
+      peerASN: 65000
+      connectRetryTimeSeconds: 120
+      holdTimeSeconds: 30
+      keepAliveTimeSeconds: 30
+      gracefulRestart:
+        enabled: true
+        restartTimeSeconds: 120
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: worker2
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-bgp-cp-worker2
+  virtualRouters:
+  - localASN: 65003
+    # exportPodCIDR: true
+    serviceSelector:
+      matchExpressions:
+        - operator: NotIn
+          key: dummy
+          values:
+            - dummy
+    neighbors:
+    - peerAddress: "169.254.3.1/32"
+      peerASN: 65000
+      connectRetryTimeSeconds: 120
+      holdTimeSeconds: 30
+      keepAliveTimeSeconds: 30
+      gracefulRestart:
+        enabled: true
+        restartTimeSeconds: 120
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: worker3
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cilium-bgp-cp-worker3
+  virtualRouters:
+  - localASN: 65004
+    # exportPodCIDR: true
+    serviceSelector:
+      matchExpressions:
+        - operator: NotIn
+          key: dummy
+          values:
+            - dummy
+    neighbors:
+    - peerAddress: "169.254.4.1/32"
+      peerASN: 65000
+      connectRetryTimeSeconds: 120
+      holdTimeSeconds: 30
+      keepAliveTimeSeconds: 30
+      gracefulRestart:
+        enabled: true
+        restartTimeSeconds: 120
