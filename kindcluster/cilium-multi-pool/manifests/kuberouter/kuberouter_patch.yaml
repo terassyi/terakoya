@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-router
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: kube-router
+        args:
+        - "--run-router=true"
+        - "--run-firewall=false"
+        - "--run-service-proxy=false"
+        - "--enable-cni=false"
+        - "--enable-pod-egress=false"

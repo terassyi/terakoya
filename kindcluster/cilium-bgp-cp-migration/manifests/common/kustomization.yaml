@@ -1,0 +1,4 @@
+resources:
+  - namespace.yaml
+  - lb_cluster.yaml
+  - lb_local.yaml

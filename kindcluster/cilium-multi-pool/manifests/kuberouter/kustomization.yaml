@@ -1,0 +1,4 @@
+resources:
+  - generic-kuberouter-only-advertise-routes.yaml
+patchesStrategicMerge:
+  - kuberouter_patch.yaml

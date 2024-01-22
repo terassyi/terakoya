@@ -1,0 +1,33 @@
+bgp:
+  announce:
+    loadbalancerIP: true
+  enabled: true
+kubeProxyReplacement: "partial"
+labels: "k8s:!controller-uid k8s:!job-name k8s:!node"
+loadBalancer:
+  acceleration: disabled
+  algorithm: maglev
+  dsrDispatch: geneve
+  dsrL4Translate: backend
+  mode: dsr
+maglev:
+  hashSeed: 3HCx6JennjWtot2U
+operator:
+  rollOutPods: true
+  prometheus:
+    enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+policyAuditMode: false
+policyEnforcementMode: "default"
+prometheus:
+  enabled: true
+resources:
+  requests:
+    cpu: 100m
+    memory: 400Mi
+rollOutCiliumPods: true
+sessionAffinity: true
+tunnel: "disabled"

@@ -6,7 +6,7 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: cilium-bgp-cp-control-plane
+      kubernetes.io/hostname: kind-control-plane
   virtualRouters:
   - localASN: 65001
     # exportPodCIDR: true
@@ -33,7 +33,7 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: cilium-bgp-cp-worker
+      kubernetes.io/hostname: kind-worker
   virtualRouters:
   - localASN: 65002
     # exportPodCIDR: true
@@ -60,7 +60,7 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: cilium-bgp-cp-worker2
+      kubernetes.io/hostname: kind-worker2
   virtualRouters:
   - localASN: 65003
     # exportPodCIDR: true
@@ -87,7 +87,7 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      kubernetes.io/hostname: cilium-bgp-cp-worker3
+      kubernetes.io/hostname: kind-worker3
   virtualRouters:
   - localASN: 65004
     # exportPodCIDR: true

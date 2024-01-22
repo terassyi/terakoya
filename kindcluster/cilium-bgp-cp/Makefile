@@ -25,6 +25,8 @@ export KUBECTL
 KIND_CONFIG = kind-config.yaml
 CONTAINERLAB_CONFIG = lab.yaml
 
+CILIUM_DIR ?= /home/terassyi/workspace/cilium
+
 .PHONY: setup
 setup: $(KIND) $(KUBECTL) $(KUSTOMIZE) $(CILIUM_CLI) $(CONTAINERLAB) $(HELM)
 
@@ -34,7 +36,7 @@ start: setup
 	$(SUDO) sysctl -w fs.inotify.max_user_watches=65536
 
 	@echo "CREATE THE KIND CLUSTER"
-	$(KIND) create cluster --image kindest/node:v$(KUBERNETES_VERSION) --config=$(KIND_CONFIG) --name $(CLUSTER_NAME)
+	$(KIND) create cluster --image kindest/node:v$(KUBERNETES_VERSION) --config=$(KIND_CONFIG)
 
 	@echo "CREATE TOPOLOGY"
 	$(SUDO) $(CONTAINERLAB) -t $(CONTAINERLAB_CONFIG) deploy
@@ -60,8 +62,58 @@ start: setup
 .PHONY:
 stop:
 	$(SUDO) $(CONTAINERLAB) -t $(CONTAINERLAB_CONFIG) destroy
-	$(KIND) delete cluster --name $(CLUSTER_NAME)
+	$(KIND) delete cluster
 
+.PHONY: start-with-build
+start-with-build:
+	$(SUDO) sysctl -w fs.inotify.max_user_instances=512
+	$(SUDO) sysctl -w fs.inotify.max_user_watches=65536
+
+	@echo "CREATE THE KIND CLUSTER"
+	$(KIND) create cluster --image kindest/node:v$(KUBERNETES_VERSION) --config=$(KIND_CONFIG)
+
+	@echo "CREATE TOPOLOGY"
+	$(SUDO) $(CONTAINERLAB) -t $(CONTAINERLAB_CONFIG) deploy
+
+	@echo "BUILD CILIUM"
+	$(MAKE) -C $(CILIUM_DIR) kind-image
+
+	@echo "INSTALL CILIUM"
+	$(CILIUM_CLI) install --wait \
+    --chart-directory=$(CILIUM_DIR)/install/kubernetes/cilium \
+    --helm-set=image.repository=localhost:5000/cilium/cilium-dev \
+    --helm-set=image.useDigest=false \
+    --helm-set=image.tag=local \
+    --helm-set=operator.image.repository=localhost:5000/cilium/operator \
+    --helm-set=operator.image.suffix="" \
+    --helm-set=operator.image.tag=local \
+    --helm-set=operator.image.useDigest=false \
+    --helm-set=hubble.relay.image.repository=localhost:5000/cilium/hubble-relay \
+    --helm-set=hubble.relay.image.tag=local \
+    --helm-set=hubble.relay.image.useDigest=false \
+    --helm-set=hubble.eventBufferCapacity=65535 \
+    --helm-set=bpf.monitorAggregation=none \
+    --helm-set=bgpControlPlane.enabled=true \
+    --nodes-without-cilium=kind-worker3 \
+    --helm-set-string=kubeProxyReplacement=strict \
+    --helm-set-string=routingMode=native \
+    --helm-set-string=autoDirectNodeRoutes=true \
+    --helm-set-string=ipv4NativeRoutingCIDR=10.244.0.0/16 \
+    --helm-set-string=tunnel=disabled \
+    --helm-set-string=ipv6NativeRoutingCIDR=fd00:10:244::/56 \
+    --helm-set-string=loadBalancer.acceleration=disabled \
+    --helm-set-string=loadBalancer.mode=dsr \
+    --helm-set-string=loadBalancer.dsrDispatch=geneve \
+    --helm-set-string=loadBalancer.dsrL4Translate=backend \
+    --helm-set=bpf.masquerade=true \
+    --helm-set=enableIPv6Masquerade=false \
+    --helm-set=debug.enabled=true \
+    --helm-set=ipv6.enabled=true \
+    --helm-set-string=devices=eth+
+
+	@echo "CREATE RESOURCES"
+	sleep 3
+	$(KUSTOMIZE) build $(MANIFESTDIR) | $(KUBECTL) apply -f -   
 
 $(KIND):
 	mkdir -p $(dir $@)

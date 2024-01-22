@@ -1,0 +1,21 @@
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "default-pool"
+spec:
+  cidrs:
+  - cidr: "10.254.0.0/30"
+  serviceSelector:
+    matchLabels:
+      lb-ipam: default-pool
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "non-default-pool"
+spec:
+  cidrs:
+  - cidr: "10.254.0.4/30"
+  serviceSelector:
+    matchLabels:
+      lb-ipam: non-default-pool

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-local
+  namespace: test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-local
+  template:
+    metadata:
+      labels:
+        app: app-local
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+---
+# LoadBalancer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-svc-local
+  namespace: test
+  labels:
+    lb-ipam: default-pool
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: app-local
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-local-2
+  namespace: test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-local-2
+  template:
+    metadata:
+      labels:
+        app: app-local-2
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+---
+# LoadBalancer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-svc-local-2
+  namespace: test
+  labels:
+    lb-ipam: non-default-pool
+  annotations:
+    metallb.universe.tf/address-pool: non-default
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: app-local-2
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

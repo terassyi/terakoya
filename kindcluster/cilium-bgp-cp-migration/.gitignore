@@ -1,0 +1,6 @@
+/bin
+/clab-cilium-bgp-cp-migration
+.lab.yaml.bak
+*.pcap
+*.log
+*.txt

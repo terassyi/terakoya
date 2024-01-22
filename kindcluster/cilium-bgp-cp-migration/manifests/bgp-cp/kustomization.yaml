@@ -1,0 +1,4 @@
+resources:
+  - cilium_config.yaml
+  - bgp_peering_policy.yaml
+  - loadbalancer_ip_pool.yaml
