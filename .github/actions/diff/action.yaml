@@ -1,0 +1,17 @@
+name: diff
+description: Get diff
+inputs:
+  subdir:
+    required: true
+outputs:
+  diff-count:
+    value: ${{ steps.diff.outputs.all_changed_files_count }}
+runs:
+  using: composite
+  steps:
+  - id: diff
+    uses: tj-actions/changed-files@v4
+    name: Check diff
+    with:
+      dir_names: ${{ inputs.subdir }}
+
