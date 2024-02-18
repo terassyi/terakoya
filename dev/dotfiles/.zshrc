@@ -82,3 +82,9 @@ source /home/terassyi/.config/broot/launcher/bash/br
 
 # gh
 eval "$(gh completion -s zsh)"
+
+# enter ns
+function in_ns() {
+	pid=$(docker inspect $1 --format '{{.State.Pid}}')
+	sudo nsenter --target $pid --net ${@:2}
+}
