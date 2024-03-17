@@ -16,4 +16,4 @@ COPY --from=builder /work/test-server /bin/test-server
 
 
 EXPOSE 8080
-CMD [ "/work/test-server" ]
+CMD [ "/bin/test-server" ]
