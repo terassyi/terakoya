@@ -15,9 +15,12 @@ spec:
     spec:
       containers:
         - name: app
-          image: nginx:latest
+          image: ghcr.io/cybozu/tcp-keepalive:0
+          args:
+            - server
+            - -l=0.0.0.0:8000
           ports:
-            - containerPort: 80
+            - containerPort: 8000
 ---
 # LoadBalancer Service
 apiVersion: v1
@@ -35,4 +38,4 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
+      targetPort: 8000
