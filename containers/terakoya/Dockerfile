@@ -1,4 +1,8 @@
+FROM ghcr.io/cybozu/tcp-keepalive:0 as TCPKEEPALIVE
+
 FROM ubuntu:22.04
+
+COPY --from=TCPKEEPALIVE /usr/bin/tcp-keepalive /usr/bin/tcp-keepalive
 
 ARG GO_VERSION
 
