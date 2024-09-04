@@ -51,7 +51,9 @@ start: setup
 		--set bgpControlPlane.enabled=true \
 		--set ipam.mode=kubernetes \
 		--set k8s.requireIPv4PodCIDR=true \
-		--set k8s.requireIPv6PodCIDR=true 
+		--set k8s.requireIPv6PodCIDR=true \
+		--set kubeProxyReplacement=strict \
+		--set loadBalancer.algorithm=maglev
 	sleep 3
 	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=2 --timeout=600s deploy/cilium-operator
 

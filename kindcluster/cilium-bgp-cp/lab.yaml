@@ -77,7 +77,7 @@ topology:
       - ip route add 192.168.0.0/24 via 169.254.4.1 dev net0
     client0:
       kind: linux
-      image: ghcr.io/terassyi/terakoya:0.1.2
+      image: ghcr.io/terassyi/terakoya:0.1.4
       exec:
       - ip addr add 192.168.0.2/24 dev net0
       - ip route change default via 192.168.0.1
