@@ -2,7 +2,7 @@ CLUSTER_NAME := cilium-bgp-cp
 
 KIND_VERSION := 0.20.0
 KUBERNETES_VERSION := 1.28.0
-CILIUM_VERSION := 1.14.1
+CILIUM_VERSION := 1.14.14
 CILIUM_CLI_VERSION := 0.15.7
 KUSTOMIZE_VERSION := 5.1.1
 CONTAINERLAB_VERSION := 0.44.3
@@ -47,12 +47,22 @@ start: setup
 	$(HELM) install cilium cilium/cilium \
 		--version $(CILIUM_VERSION) \
 		--namespace kube-system \
-		--set ipv6.enabled=true \
+		--set k8sServiceHost=kind-control-plane \
+		--set k8sServicePort=6443 \
+		--set hostPort.enabled=true \
+		--set nodePort.enabled=true \
 		--set bgpControlPlane.enabled=true \
 		--set ipam.mode=kubernetes \
 		--set k8s.requireIPv4PodCIDR=true \
-		--set k8s.requireIPv6PodCIDR=true \
+		--set devices=net+ \
 		--set kubeProxyReplacement=strict \
+		--set routingMode=native \
+		--set autoDirectNodeRoutes=true \
+		--set ipv4NativeRoutingCIDR=10.244.0.0/16 \
+		--set loadBalancer.mode=dsr \
+		--set loadBalancer.dsrDispatch=opt \
+		--set loadBalancer.dsrL4Translate=backend \
+		--set loadBalancer.acceleration=disabled \
 		--set loadBalancer.algorithm=maglev
 	sleep 3
 	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=2 --timeout=600s deploy/cilium-operator
