@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: client
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        sysctls:
+        - name: net.ipv4.ping_group_range
+          value: 0 10000
+      containers:
+      - args:
+        - pause
+        image: ghcr.io/cybozu/ubuntu-debug:22.04
+        name: ubuntu

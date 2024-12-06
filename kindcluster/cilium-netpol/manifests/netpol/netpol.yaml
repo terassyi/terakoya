@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: app1-denies-from-client
+spec:
+  endpointSelector: 
+    matchLabels:
+      app.kubernetes.io/name: app1
+  ingressDeny:
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: client
