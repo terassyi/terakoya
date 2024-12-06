@@ -88,3 +88,7 @@ function in_ns() {
 	pid=$(docker inspect $1 --format '{{.State.Pid}}')
 	sudo nsenter --target $pid --net ${@:2}
 }
+
+# krew
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
