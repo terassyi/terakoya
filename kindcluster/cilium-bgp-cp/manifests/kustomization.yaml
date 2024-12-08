@@ -3,3 +3,4 @@ resources:
   - loadbalancer_ip_pool.yaml
   - lb_cluster.yaml
   - lb_local.yaml
+  - tcp-half-close.yaml

@@ -1,8 +1,9 @@
 CLUSTER_NAME := cilium-bgp-cp
 
-KIND_VERSION := 0.20.0
-KUBERNETES_VERSION := 1.28.0
-CILIUM_VERSION := 1.14.14
+KIND_VERSION := 0.25.0
+KUBERNETES_VERSION := 1.31.2
+# CILIUM_VERSION := 1.14.14
+CILIUM_VERSION := 1.15.11
 CILIUM_CLI_VERSION := 0.15.7
 KUSTOMIZE_VERSION := 5.1.1
 CONTAINERLAB_VERSION := 0.44.3
@@ -52,12 +53,15 @@ start: setup
 		--set hostPort.enabled=true \
 		--set nodePort.enabled=true \
 		--set bgpControlPlane.enabled=true \
-		--set ipam.mode=kubernetes \
+		--set ipam.mode=multi-pool \
+		--set ipam.operator.autoCreateCiliumPodIPPools.default.ipv4.cidrs='{10.244.0.0/16}' \
+		--set ipam.operator.autoCreateCiliumPodIPPools.default.ipv4.maskSize=27 \
 		--set k8s.requireIPv4PodCIDR=true \
 		--set devices=net+ \
-		--set kubeProxyReplacement=strict \
+		--set kubeProxyReplacement=true \
 		--set routingMode=native \
-		--set autoDirectNodeRoutes=true \
+    	--set bpf.masquerade=true \
+		--set autoDirectNodeRoutes=false \
 		--set ipv4NativeRoutingCIDR=10.244.0.0/16 \
 		--set loadBalancer.mode=dsr \
 		--set loadBalancer.dsrDispatch=opt \
@@ -69,7 +73,7 @@ start: setup
 
 	@echo "APPLY RESOURCES"
 	sleep 3
-	$(KUSTOMIZE) build $(MANIFESTDIR) | $(KUBECTL) apply -f -   
+	$(KUSTOMIZE) build $(MANIFESTDIR) | $(KUBECTL) apply -f -
 
 .PHONY:
 stop:

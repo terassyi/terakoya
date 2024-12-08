@@ -41,6 +41,10 @@ topology:
         -c '    neighbor K8S-NODES prefix-list LAB-SUBNET out'
         -c '  exit-address-family'
         -c '!'
+    router0-debug:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      network-mode: container:clab-cilium-bgp-cp-router0
     control-plane0:
       kind: linux
       image: nicolaka/netshoot:latest
@@ -77,7 +81,7 @@ topology:
       - ip route add 192.168.0.0/24 via 169.254.4.1 dev net0
     client0:
       kind: linux
-      image: ghcr.io/terassyi/terakoya:0.1.4
+      image: ghcr.io/terassyi/terakoya:0.1.5
       exec:
       - ip addr add 192.168.0.2/24 dev net0
       - ip route change default via 192.168.0.1

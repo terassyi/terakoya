@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcp-half-close-tester-server
+  namespace: test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tcp-half-close-tester
+  template:
+    metadata:
+      labels:
+        app: tcp-half-close-tester
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/terassyi/tcp-half-close-tester:0.0.2
+          args:
+            - server
+            - -f=/data
+            - -c=100
+            - -i=15s
+          ports:
+            - containerPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/terassyi/terakoya:0.0.2
+          args:
+            - server
+            - -f=/data
+            - -c=100
+            - -i=15s
+          ports:
+            - containerPort: 4000
+---
+---
+# LoadBalancer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: tcp-half-close-tester
+  namespace: test
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  selector:
+    app: tcp-half-close-tester
+  ports:
+    - name: tcp
+      port: 4000
+      targetPort: 4000

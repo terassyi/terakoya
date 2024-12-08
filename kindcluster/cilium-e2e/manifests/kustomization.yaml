@@ -1,0 +1,2 @@
+resources:
+  - tcp-half-close-tester.yaml

@@ -3,6 +3,6 @@ kind: CiliumLoadBalancerIPPool
 metadata:
   name: "default-pool"
 spec:
-  cidrs:
+  blocks:
   - cidr: "10.254.0.0/24"
   - cidr: "fd00:10:254::/64"
