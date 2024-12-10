@@ -26,7 +26,7 @@ setup: $(KIND) $(KUBECTL) $(KUSTOMIZE) $(CILIUM_CLI) $(HELM) clone-cilium
 clone-cilium: cilium/VERSION
 
 .PHONY: start
-start:
+start: setup
 	cd cilium && \
 	git fetch origin && \
 	git checkout v${CILIUM_VERSION}
@@ -35,6 +35,8 @@ start:
 	cilium/contrib/scripts/kind.sh "1" "3" "" "kindest/node:v$(KUBERNETES_VERSION)" "none" "ipv4"
 	$(KUBECTL) label node kind-worker3 --overwrite cilium.io/no-schedule=true
 	$(MAKE) -C cilium kind-image
+	$(KIND) load docker-iamge ghcr.io/terassyi/tcp-half-close-tester:0.0.2
+	$(KIND) load docker-iamge ghcr.io/terassyi/terakoya:0.1.5
 	$(CILIUM_CLI) install --wait \
 		--chart-directory=$(PWD)/cilium/install/kubernetes/cilium \
 		--helm-set=image.repository=localhost:5000/cilium/cilium-dev \
@@ -69,6 +71,7 @@ start:
 		--helm-set=debug.enabled=true \
 		--helm-set=hostPort.enabled=true \
 		--helm-set=nodePort.enabled=true \
+		--helm-set=socketLB.hostNamespaceOnly=true \
 		--nodes-without-cilium
 
 .PHONY: connectivity-test

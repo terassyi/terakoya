@@ -26,7 +26,7 @@ spec:
           args:
             - server
             - -f=/data
-            - -c=100
+            - -c=10485760
           ports:
             - containerPort: 4000
 ---
@@ -51,7 +51,7 @@ spec:
           args:
             - server
             - -f=/data
-            - -c=100
+            - -c=10485760
             - -i=15s
           ports:
             - containerPort: 4000
@@ -77,9 +77,6 @@ spec:
             - sleep
           args:
             - infinity
-      nodeSelector:
-        # cilium.io/no-schedule: "true"
-        kubernetes.io/hostname: kind-worker3
       hostNetwork: true
       tolerations:
       - operator: Exists
