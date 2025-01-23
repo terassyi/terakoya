@@ -60,9 +60,10 @@ start: setup
 		--set bgp.announce.loadbalancerIP=true \
 		--set bgpControlPlane.enabled=false \
 		--set ipam.mode=kubernetes \
-		--set k8s.requireIPv4PodCIDR=true
+		--set k8s.requireIPv4PodCIDR=true \
+	    --set operator.replicas=1
 	sleep 3
-	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=2 --timeout=600s deploy/cilium-operator
+	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=1 --timeout=600s deploy/cilium-operator
 
 	@echo "APPLY RESOURCES"
 	sleep 1
@@ -147,11 +148,12 @@ start-with-build:
 		--set bgp.announce.loadbalancerIP=true \
 		--set bgpControlPlane.enabled=false \
 		--set ipam.mode=kubernetes \
-		--set k8s.requireIPv4PodCIDR=true
+		--set k8s.requireIPv4PodCIDR=true \
+		--set operator.replicas=1
 
 	@echo "CREATE RESOURCES"
 	sleep 3
-	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=2 --timeout=600s deploy/cilium-operator
+	$(KUBECTL) -n kube-system wait --for=jsonpath='.status.readyReplicas'=1 --timeout=600s deploy/cilium-operator
 
 	@echo "APPLY RESOURCES"
 	sleep 1

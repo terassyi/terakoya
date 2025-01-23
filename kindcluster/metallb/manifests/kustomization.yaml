@@ -1,0 +1,3 @@
+resources:
+  - pool.yaml
+  - lb.yaml

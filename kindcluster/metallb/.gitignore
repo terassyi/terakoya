@@ -1,0 +1,6 @@
+/bin
+/clab-metallb
+.lab.yaml.bak
+*.pcap
+*.log
+*.txt
