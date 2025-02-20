@@ -14,19 +14,22 @@ ARG NIX_CHANNEL=https://github.com/NixOS/nixpkgs/archive/refs/tags/${NIXPKGS_VER
 SHELL ["bin/bash", "-c"]
 
 RUN apt update && \
-	apt install -y git \
+  apt install -y git \
   curl \
   sudo \
-  xz-utils
+  xz-utils \
+  ca-certificates \
+  fish
 
-RUN useradd $USER -m -s /bin/bash && \
-  usermod --append --groups sudo $USER --shell /bin/bash && \
-  usermod --append --groups root $USER --shell /bin/bash && \
+RUN userdel -r ubuntu && \
+  useradd $USER -m -s /bin/bash && \
+  usermod --append --groups sudo $USER --shell /usr/bin/fish && \
+  usermod --append --groups root $USER --shell /usr/bin/fish && \
   sed --in-place 's/%sudo.*ALL/%sudo   ALL=(ALL:ALL) NOPASSWD:ALL/' /etc/sudoers
 
 RUN mkdir --parents /etc/nix/ && \
   echo "sandbox = relaxed" >> /etc/nix/nix.conf && \
-  echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf && \    
+  echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf && \
   echo "cores = 32" >> /etc/nix/nix.conf && \
   echo "allow-import-from-derivation = true" >> /etc/nix/nix.conf && \
   echo "narinfo-cache-negative-ttl = 30" >> /etc/nix/nix.conf  && \
@@ -38,13 +41,12 @@ RUN mkdir --parents /etc/nix/ && \
   echo "trusted-substituters = https://nix-community.cachix.org/ https://cache.nixos.org/ https://composable.cachix.org/ https://devenv.cachix.org/ https://cosmos.cachix.org https://nixpkgs-update.cachix.org/" >> /etc/nix/nix.conf  && \
   passwd --delete root
 
+# for terassyi
+VOLUME [ "/home/terassyi/terakoya" ]
+
 USER ${USER}
 ENV USER=${USER}
-
-# RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
-#   --extra-conf "sandbox = false" \
-#   --init none \
-#   --no-confirm
+ENV HOME=/home/${USER}
 
 RUN curl --location ${NIX_INSTALLER} > ~/install.sh && \
   chmod +x ~/install.sh  && \
@@ -54,7 +56,8 @@ RUN source ~/.nix-profile/etc/profile.d/nix.sh && \
   nix-channel --add ${NIX_CHANNEL} nixpkgs && \
   nix-channel --update && \
   nix profile install nixpkgs#nil && \
-  nix profile install nixpkgs#nixfmt
+  nix profile install nixpkgs#nixfmt && \
+  nix profile install nixpkgs#home-manager
 
 RUN echo "source ~/.nix-profile/etc/profile.d/nix.sh" >> ~/.profile && \
   echo "source ~/.nix-profile/etc/profile.d/nix.sh" >> ~/.bashrc

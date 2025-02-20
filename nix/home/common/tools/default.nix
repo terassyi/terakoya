@@ -30,6 +30,9 @@
     gnumake
     # Collection of utilities for controlling TCP/IP networking and traffic controll in Linux
     iproute2
+    # Cloudflare Tunnel daemon, Cloudflare Access toolkit, and DNS-over-HTTPS client
+    cloudflared
+    # Blazing fast terminal-ui for Git written in Rust
+    gitui
   ];
-
 }

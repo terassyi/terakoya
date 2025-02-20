@@ -1,1 +1,1 @@
-{ ... }: { imports = [ ./vim ]; }
+{ ... }: { imports = [ ./vim ./neovim ]; }

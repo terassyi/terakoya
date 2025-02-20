@@ -1,1 +1,1 @@
-{ pkgs, ... }: { home.packages = with pkgs; [ rustup go ]; }
+{ pkgs, ... }: { home.packages = with pkgs; [ rustup ]; }
