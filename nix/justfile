@@ -1,0 +1,7 @@
+
+docker:
+	docker build -t nix:dev .
+
+run:
+	docker run --rm -v $(pwd):/home/terassyi/terakoya -it --user terassyi nix:dev bash
+
