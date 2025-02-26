@@ -1,2 +1,4 @@
-result
-flake.lock
+src/result
+src/flake.lock
+*.iso
+*.qcow2
