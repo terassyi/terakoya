@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    coil.cybozu.com/pool: dummy
+  name: dummy-ns 
+---
+apiVersion: coil.cybozu.com/v2
+kind: AddressPool
+metadata:
+  name: dummy 
+spec:
+  blockSizeBits: 0
+  subnets:
+  - ipv4: 10.225.0.0/30
