@@ -1,0 +1,10 @@
+resources:
+  - coil.yaml
+patches:
+  - path: coild_ds_patch.yaml
+  - path: coil_cm_patch.yaml
+  - path: coil_ipam-controller_patch.yaml
+images:
+  - name: ghcr.io/cybozu-go/coil
+    newName: coil
+    newTag: dev
