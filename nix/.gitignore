@@ -1,0 +1,4 @@
+src/result
+src/flake.lock
+*.iso
+*.qcow2
