@@ -35,6 +35,9 @@ init:
 start:
 	sudo virsh start {{ VM }}
 
+down:
+    sudo virsh shutdown {{ VM }}
+
 console:
 	sudo virt-viewer {{ VM }}
 
