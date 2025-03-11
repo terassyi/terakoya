@@ -21,8 +21,8 @@ iso:
 init:
 	sudo virt-install \
 	  --name {{ VM }} \
-	  --memory 4096 \
-	  --vcpus 4 \
+	  --memory 8192 \
+	  --vcpus 8 \
 	  --disk path=$(pwd)/{{ VM }}.qcow2,size=50,bus=virtio \
 	  --cdrom $(pwd)/{{ ISO }} \
 	  --network bridge=virbr0,model=virtio \

@@ -13,6 +13,7 @@
     rust-analyzer-nightly
     # nix LSP
     nixd
+    nixfmt
     # clang
     clang
     # Powerful, fast, lightweight, embeddable scripting language

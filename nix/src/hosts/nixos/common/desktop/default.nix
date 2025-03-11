@@ -14,5 +14,7 @@
     discord
     # zoom.us video conferencing application
     zoom-us
+    # Powerful network protocol analyzer
+    wireshark
   ];
 }
