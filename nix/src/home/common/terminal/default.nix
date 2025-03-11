@@ -1,4 +1,4 @@
 { lib, userConfig, ... }: {
 
-  imports = if userConfig.hasGUI then [ ./alacritty ] else [ ];
+  imports = if userConfig.gui != "none" then [ ./alacritty ] else [ ];
 }

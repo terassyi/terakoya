@@ -1,5 +1,5 @@
 { userConfig, ... }: {
-  imports = if userConfig.hasGUI then [
+  imports = if userConfig.gui != "none" then [
     ./vim
     ./neovim
     ./vscode

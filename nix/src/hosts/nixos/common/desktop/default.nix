@@ -1,5 +1,10 @@
-{ pkgs, ... }: {
-  imports = [ ./hyprland ];
+{ pkgs, userConfig, ... }: {
+  imports = if userConfig.gui == "hyprland" then
+    [ ./hyprland ]
+  else if userConfig.gui == "gnome" then
+    [ ]
+  else
+    [ ];
   environment.systemPackages = with pkgs; [
     # Freeware web browser developed by Google
     google-chrome

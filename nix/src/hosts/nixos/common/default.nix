@@ -1,6 +1,7 @@
 { pkgs, userConfig, ... }: {
 
-  imports = if userConfig.hasGUI then [ ./shell ./desktop ] else [ ./shell ];
+  imports =
+    if userConfig.gui != "none" then [ ./shell ./desktop ] else [ ./shell ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users = {

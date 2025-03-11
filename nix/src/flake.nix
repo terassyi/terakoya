@@ -63,13 +63,14 @@
         pkgs = import nixpkgs { inherit system overlays; };
 
         # for NixOS
-        mkNixosConfiguration = system: hasGUI: hostname: username:
+        mkNixosConfiguration = system: gui: hostname: username:
           nixpkgs.lib.nixosSystem {
             specialArgs = {
               inherit inputs outputs;
               userConfig = {
                 name = username;
                 hostname = hostname;
+                inherit gui;
               };
             };
             modules =
@@ -81,15 +82,15 @@
             specialArgs = {
               inherit inputs outputs hostname;
               userConfig = {
-                # inherit hasGUI;
-                hasGUI = true;
+                # inherit gui;
+                gui = "mac";
                 name = username;
               };
             };
             modules = [ home-manager.darwinModules.home-manager ];
           };
         # for Home Manager
-        mkHomeConfiguration = system: hasGUI: hostname: username: email:
+        mkHomeConfiguration = system: gui: hostname: username: email:
           home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = {
@@ -98,7 +99,7 @@
                 name = username;
                 email = email;
                 inherit system;
-                inherit hasGUI;
+                inherit gui;
               };
             };
             modules = [
@@ -111,22 +112,22 @@
       in {
         legacyPackages = {
           nixosConfigurations = {
-            devvm = mkNixosConfiguration system true "devvm" "terassyi";
+            devvm = mkNixosConfiguration system "gnome" "devvm" "terassyi";
           };
           homeConfigurations = {
             "terassyi@dev" =
-              mkHomeConfiguration system false userInfo.hostname userInfo.name
+              mkHomeConfiguration system "none" userInfo.hostname userInfo.name
               "dev@terassyi.net";
             "terassyi@devvm" =
-              mkHomeConfiguration system true "devvm" userInfo.name
+              mkHomeConfiguration system "gnome" "devvm" userInfo.name
               userInfo.email;
             "terashima@fukdesk" =
-              mkHomeConfiguration system false "fukdesk" "terashima"
+              mkHomeConfiguration system "none" "fukdesk" "terashima"
               "terashima-tomoya@cybozu.co.jp";
             "terashima@darwin1" =
               mkHomeConfiguration system "darwin1" "terashima" userInfo.email;
             "terassyi@teradev" =
-              mkHomeConfiguration system true "teradev" userInfo.name
+              mkHomeConfiguration system "gnome" "teradev" userInfo.name
               userInfo.email;
           };
         };

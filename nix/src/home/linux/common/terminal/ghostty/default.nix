@@ -1,1 +1,3 @@
-{ userConfig, ... }: { programs.ghostty = { enable = userConfig.hasGUI; }; }
+{ userConfig, ... }: {
+  programs.ghostty = { enable = userConfig.gui != "none"; };
+}
