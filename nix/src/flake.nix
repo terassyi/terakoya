@@ -125,7 +125,8 @@
               mkHomeConfiguration system "none" "fukdesk" "terashima"
               "terashima-tomoya@cybozu.co.jp";
             "terashima@darwin1" =
-              mkHomeConfiguration system "darwin1" "terashima" userInfo.email;
+              mkHomeConfiguration system "mac" "darwin1" "terashima"
+              userInfo.email;
             "terassyi@teradev" =
               mkHomeConfiguration system "gnome" "teradev" userInfo.name
               userInfo.email;

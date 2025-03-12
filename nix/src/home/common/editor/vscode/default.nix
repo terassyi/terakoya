@@ -12,7 +12,7 @@
           golang.go
           rust-lang.rust-analyzer
           panicbit.cargo
-          ms-vscode.cpptools
+          # ms-vscode.cpptools # removed for aarch64-darwin
           zxh404.vscode-proto3
           sumneko.lua
           bmalehorn.vscode-fish
