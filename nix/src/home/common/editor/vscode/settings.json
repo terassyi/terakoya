@@ -1,0 +1,73 @@
+{
+    "explorer.confirmDragAndDrop": false,
+    "explorer.confirmDelete": true,
+    "explorer.compactFolders": false,
+    "explorer.excludeGitIgnore": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true,
+    "git.pruneOnFetch": true,
+    "scm.alwaysShowRepositories": true,
+    "scm.compactFolders": false,
+    "scm.defaultViewMode": "tree",
+    "scm.graph.badges": "all",
+    "search.showLineNumbers": true,
+    "terminal.integrated.fontFamily": "NotoMono Nerd Font",
+    "terminal.integrated.enableVisualBell": true,
+    "terminal.integrated.smoothScrolling": true,
+    "workbench.colorTheme": "Tokyo Night",
+    "workbench.editor.closeOnFileDelete": true,
+    "workbench.list.smoothScrolling": true,
+    "workbench.view.alwaysShowHeaderActions": true,
+    "workbench.startupEditor": "readme",
+    "editor.fontFamily": "NotoMono Nerd Font",
+    "editor.smoothScrolling": true,
+    "editor.cursorSmoothCaretAnimation": "off",
+    "editor.cursorBlinking": "solid",
+    "editor.wrappingIndent": "indent",
+    "editor.guides.indentation": true,
+    "editor.formatOnType": true,
+    "editor.renderWhitespace": "all",
+    "editor.renderControlCharacters": true,
+    "editor.quickSuggestions": "on",
+    "diffEditor.experimental.useTrueInlineView": true,
+    "remote.SSH.useLocalServer": true,
+    "remote.SSH.remotePlatform": {
+        "fukdesk": "linux",
+        "teradev": "linux"
+    },
+    "extensions.experimental.affinity": {
+        "asvetliakov.vscode-neovim": 1
+    },
+    "[rust]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "[go]": {
+        "editor.formatOnSave": true
+    },
+    "[lua]": {
+        "editor.formatOnSave": true
+    },
+    "[json]": {
+        "editor.formatOnSave": false,
+        "editor.tabSize": 2
+    },
+    "[yaml]": {
+        "editor.formatOnSave": false,
+        "editor.tabSize": 2
+    },
+    "[nix]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2,
+        "nix.enableLanguageServer": true,
+        "nix.serverPath": "nixd",
+        "nix.serverSettings": {
+            "nixd": {
+                "formatting": {
+                    "command": [ "nixfmt" ]
+                }
+            }
+        }
+    }
+}
