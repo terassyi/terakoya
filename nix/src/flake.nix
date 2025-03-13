@@ -112,7 +112,8 @@
       in {
         legacyPackages = {
           nixosConfigurations = {
-            devvm = mkNixosConfiguration system "gnome" "devvm" "terassyi";
+            devvm = mkNixosConfiguration system "gnome" "devvm" userInfo.name;
+            teracarbon = mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
           };
           homeConfigurations = {
             "terassyi@dev" =
@@ -129,6 +130,9 @@
               userInfo.email;
             "terassyi@teradev" =
               mkHomeConfiguration system "gnome" "teradev" userInfo.name
+              userInfo.email;
+            "terassyi@teracarbon" =
+              mkHomeConfiguration system "hyprland" "teracarbon" userInfo.name
               userInfo.email;
           };
         };

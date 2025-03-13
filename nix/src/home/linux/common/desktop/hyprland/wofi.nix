@@ -10,5 +10,5 @@
       key_up = "Ctrl-k";
       key_down = "Ctrl-j";
     };
-  }
+  };
 }

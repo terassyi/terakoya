@@ -6,9 +6,11 @@
   # Enable Ozone Wayland support in Chromium and Electron based applications
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
-    QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
+    # QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     XCURSOR_SIZE = "24";
   };
+
+  services.seatd.enable = true;
 
   environment.systemPackages = with pkgs; [
     # Hyprland's GPU-accelerated screen locking utility
