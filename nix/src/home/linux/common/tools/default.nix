@@ -4,5 +4,7 @@
     iproute2
     # Set of small useful utilities for Linux networking
     iputils
+    # Debugging/program analysis tools for the eBPF subsystem
+    bpftools
   ];
 }

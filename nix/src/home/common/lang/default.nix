@@ -16,6 +16,7 @@
     nixfmt
     # clang
     clang
+    llvm
     # Powerful, fast, lightweight, embeddable scripting language
     lua
     # Opinionated Lua code formatter

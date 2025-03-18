@@ -19,6 +19,10 @@
     hyprpaper
     # Hyprland's idle daemon
     hypridle
+    # Hyprland cursor format, library and utilities
+    hyprcursor
+    # Rose Pine theme for Hyprcursor
+    rose-pine-hyprcursor
     # Day/night gamma adjustments for Wayland
     wlsunset
     # Wayland based logout menu
@@ -28,4 +32,5 @@
     # Xfce file manager
     xfce.thunar
   ];
+
 }

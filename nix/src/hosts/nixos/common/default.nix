@@ -1,7 +1,13 @@
 { pkgs, userConfig, ... }: {
 
-  imports =
-    if userConfig.gui != "none" then [ ./shell ./desktop ] else [ ./shell ];
+  imports = if userConfig.gui != "none" then [
+    ./shell
+    ./desktop
+    ./tools
+  ] else [
+    ./shell
+    ./tools
+  ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users = {
@@ -17,6 +23,7 @@
     enable = true;
     type = "fcitx5";
     fcitx5.addons = with pkgs; [ fcitx5-mozc ];
+    fcitx5.waylandFrontend = true;
   };
 
   # Set your time zone.

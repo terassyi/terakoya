@@ -1,0 +1,3 @@
+background-opacity = 0.9
+background-blur = true
+initial-command = zellij

@@ -1,1 +1,1 @@
-{ ... }: { imports = [ ./hyprlnd ]; }
+{ ... }: { imports = [ ./hyprland ]; }

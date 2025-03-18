@@ -21,6 +21,7 @@
     "workbench.view.alwaysShowHeaderActions": true,
     "workbench.startupEditor": "readme",
     "editor.fontFamily": "NotoMono Nerd Font",
+    "editor.fontSize": 14,
     "editor.smoothScrolling": true,
     "editor.cursorSmoothCaretAnimation": "off",
     "editor.cursorBlinking": "solid",
