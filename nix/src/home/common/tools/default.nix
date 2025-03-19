@@ -42,5 +42,7 @@
     # Tool to access the X clipboard from a console application
     # xclip
     wl-clipboard
+    # Extraction utility for archives compressed in .zip format
+    unzip
   ];
 }

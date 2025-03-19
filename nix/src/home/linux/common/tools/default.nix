@@ -6,5 +6,7 @@
     iputils
     # Debugging/program analysis tools for the eBPF subsystem
     bpftools
+    # Library for loading eBPF programs and reading and manipulating eBPF objects from user-space
+    libbpf
   ];
 }
