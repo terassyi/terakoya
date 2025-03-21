@@ -35,8 +35,10 @@ start: setup
 	cilium/contrib/scripts/kind.sh "1" "3" "" "kindest/node:v$(KUBERNETES_VERSION)" "none" "ipv4"
 	$(KUBECTL) label node kind-worker3 --overwrite cilium.io/no-schedule=true
 	$(MAKE) -C cilium kind-image
-	$(KIND) load docker-iamge ghcr.io/terassyi/tcp-half-close-tester:0.0.2
-	$(KIND) load docker-iamge ghcr.io/terassyi/terakoya:0.1.5
+	docker pull ghcr.io/terassyi/tcp-half-close-tester:0.0.2
+	docker pull ghcr.io/terassyi/terakoya:0.1.5
+	$(KIND) load docker-image ghcr.io/terassyi/tcp-half-close-tester:0.0.2
+	$(KIND) load docker-image ghcr.io/terassyi/terakoya:0.1.5
 	$(CILIUM_CLI) install --wait \
 		--chart-directory=$(PWD)/cilium/install/kubernetes/cilium \
 		--helm-set=image.repository=localhost:5000/cilium/cilium-dev \
