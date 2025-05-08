@@ -55,9 +55,19 @@
         # allow unfree software
         allowUnfree = { nixpkgs.config.allowUnfree = true; };
 
+        # vscode workaround for darwin
+        vscode = nixpkgs.legacyPackages.${system}.vscode.overrideAttrs (old: {
+          installPhase = ''
+            whoami
+          '' + old.installPhase;
+        });
+
         # rust tool chain
-        overlays =
-          [ fenix.overlays.default nix-vscode-extensions.overlays.default ];
+        overlays = [
+          fenix.overlays.default
+          nix-vscode-extensions.overlays.default
+          vscode
+        ];
 
         # nixpkgs
         pkgs = import nixpkgs { inherit system overlays; };
@@ -113,7 +123,8 @@
         legacyPackages = {
           nixosConfigurations = {
             devvm = mkNixosConfiguration system "gnome" "devvm" userInfo.name;
-            teracarbon = mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
+            teracarbon =
+              mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
           };
           homeConfigurations = {
             "terassyi@dev" =
