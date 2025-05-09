@@ -14,17 +14,10 @@
     # nix LSP
     nixd
     nixfmt
-    # clang
-    llvmPackages_20.clang-unwrapped
-    # llvm toolchain
-    llvmPackages_20.libllvm
-    # lldb
-    lldb_20
     # Powerful, fast, lightweight, embeddable scripting language
     lua
     # Opinionated Lua code formatter
     stylua
-
   ];
 
 }

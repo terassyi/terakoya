@@ -55,18 +55,10 @@
         # allow unfree software
         allowUnfree = { nixpkgs.config.allowUnfree = true; };
 
-        # vscode workaround for darwin
-        vscode = nixpkgs.legacyPackages.${system}.vscode.overrideAttrs (old: {
-          installPhase = ''
-            whoami
-          '' + old.installPhase;
-        });
-
-        # rust tool chain
+        # overlays settings
         overlays = [
           fenix.overlays.default
           nix-vscode-extensions.overlays.default
-          vscode
         ];
 
         # nixpkgs
@@ -149,4 +141,3 @@
         };
       });
 }
-
