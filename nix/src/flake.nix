@@ -59,6 +59,7 @@
         overlays = [
           fenix.overlays.default
           nix-vscode-extensions.overlays.default
+          (import ./overlays/libbpf.nix)
         ];
 
         # nixpkgs
