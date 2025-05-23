@@ -118,6 +118,8 @@
             devvm = mkNixosConfiguration system "gnome" "devvm" userInfo.name;
             teracarbon =
               mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
+            teradev =
+              mkNixosConfiguration system "gnome" "teradev" userInfo.name;
           };
           homeConfigurations = {
             "terassyi@dev" =
