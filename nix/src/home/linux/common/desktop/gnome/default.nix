@@ -6,6 +6,7 @@
     gnomeExtensions.blur-my-shell
     gnomeExtensions.space-bar
     gnomeExtensions.system-monitor
+    gnomeExtensions.pip-on-top
     albert
   ];
 
@@ -17,6 +18,7 @@
         "gTile@vibou"
         "user-theme@gnome-shell-extensions.gcampax.github.com"
         "blur-my-shell@aunetx"
+        "pip-on-top@rafostar.github.com"
         "space-bar@luchrioh"
         "system-monitor@gnome-shell-extensions.gcampax.github.com"
       ];
@@ -38,9 +40,9 @@
     "org/gnome/desktop/background" = {
       "color-shading-type" = "solid";
       "picture-uri" =
-        "file://home/${userConfig.name}/.config/wallpapers/interstellar.jpg";
+        "file:///home/${userConfig.name}/.local/share/backgrounds/interstellar.jpg";
       "picture-uri-dark" =
-        "file://home/${userConfig.name}/.config/wallpapers/interstellar.jpg";
+        "file:///home/${userConfig.name}/.local/share/backgrounds/interstellar.jpg";
       "primary-color" = "#000000000000";
       "second-color" = "#000000000000";
     };
@@ -49,14 +51,11 @@
       "current" = lib.gvariant.mkUint32 0;
       "sources" = [
         (lib.gvariant.mkTuple [ "xkb" "us" ])
-        (lib.gvariant.mkTuple [ "xkb" "jp" ])
+        (lib.gvariant.mkTuple [ "ibus" "mozc-on" ])
       ];
     };
 
-    "org/gnome/desktop/wm/keybindings" = {
-      "switch-input-source" = [ "<Control>space" ];
-      "switch-input-source-backward" = [ "<Shift><Control>space" ];
-    };
+    "org/gnome/desktop/wm/keybindings" = { };
 
     "org/gnome/desktop/session" = { "idle-delay" = lib.gvariant.mkUint32 600; };
 
@@ -116,6 +115,11 @@
   };
 
   xdg.configFile."wallpapers" = {
+    source = ../wallpapers;
+    recursive = true;
+  };
+
+  xdg.dataFile."backgrounds" = {
     source = ../wallpapers;
     recursive = true;
   };

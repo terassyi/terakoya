@@ -119,7 +119,7 @@
             teracarbon =
               mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
             teradev =
-              mkNixosConfiguration system "gnome" "teradev" userInfo.name;
+              mkNixosConfiguration system "hyprland" "teradev" userInfo.name;
           };
           homeConfigurations = {
             "terassyi@dev" =

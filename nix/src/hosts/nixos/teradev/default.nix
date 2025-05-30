@@ -5,10 +5,9 @@
 { config, pkgs, userConfig, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [ # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -33,6 +32,24 @@
     variant = "";
   };
 
+  # environment.sessionVariables = {
+  #   GTK_IM_MODULE = "fcitx";
+  #   QT_IM_MODULE = "fcitx";
+  #   XMODIFIERS = "@im=fcitx";
+  # };
+  #
+  # environment.variables = { NIXOS_OZONE_WL = "1"; };
+
+  i18n.inputMethod = {
+    enable = true;
+    type = "ibus";
+    ibus.engines = with pkgs.ibus-engines; [ mozc ];
+    # fcitx5.addons = with pkgs; [ fcitx5-mozc fcitx5-gtk ];
+    # fcitx5.waylandFrontend = true;
+  };
+
+  environment.variables = { IBUS_ENABLE_SYNC_MODE = "1"; };
+
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
@@ -52,32 +69,16 @@
     #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.terassyi = {
-    isNormalUser = true;
-    description = "terassyi";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [
-    #  thunderbird
-    ];
-  };
-
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  #  wget
+    #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    #  wget
     git
     vim
     gnome-terminal
   ];
-
-  system.stateVersion = "24.11"; # Did you read the comment?
-
 }

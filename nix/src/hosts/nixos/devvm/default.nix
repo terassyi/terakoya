@@ -34,6 +34,13 @@
     variant = "";
   };
 
+  i18n.inputMethod = {
+    enable = true;
+    type = "fcitx5";
+    fcitx5.addons = with pkgs; [ fcitx5-mozc fcitx5-gtk ];
+    fcitx5.waylandFrontend = true;
+  };
+
   # Enable CUPS to print documents.
   services.printing.enable = true;
 

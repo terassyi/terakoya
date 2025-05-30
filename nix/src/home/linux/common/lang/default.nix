@@ -6,5 +6,7 @@
     llvmPackages_20.libllvm
     # lldb
     lldb_20
+    # GNU Compiler Collection
+    gcc
   ];
 }
