@@ -131,6 +131,9 @@
             "terashima@fukdesk" =
               mkHomeConfiguration system "none" "fukdesk" "terashima"
               "terashima-tomoya@cybozu.co.jp";
+            "terashima@dev" =
+              mkHomeConfiguration system "none" "dev" "terashima"
+              "terashima-tomoya@cybozu.co.jp";
             "terashima@darwin1" =
               mkHomeConfiguration system "mac" "darwin1" "terashima"
               userInfo.email;
