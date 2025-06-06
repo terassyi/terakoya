@@ -120,8 +120,6 @@
               mkNixosConfiguration system "hyprland" "teracarbon" userInfo.name;
             teradev =
               mkNixosConfiguration system "hyprland" "teradev" userInfo.name;
-            fukdesk2 =
-              mkNixosConfiguration system "none" "fukdesk2" "terashima";
           };
           homeConfigurations = {
             "terassyi@dev" =
@@ -132,9 +130,6 @@
               userInfo.email;
             "terashima@fukdesk" =
               mkHomeConfiguration system "none" "fukdesk" "terashima"
-              "terashima-tomoya@cybozu.co.jp";
-            "terashima@fukdesk2" =
-              mkHomeConfiguration system "none" "fukdesk2" "terashima"
               "terashima-tomoya@cybozu.co.jp";
             "terashima@darwin1" =
               mkHomeConfiguration system "mac" "darwin1" "terashima"
