@@ -1,0 +1,51 @@
+
+docker:
+	docker build -t nix:dev .
+
+run:
+	docker run --rm --name dev -v $(pwd)/src:/home/terassyi/terakoya -it --user terassyi nix:dev bash
+
+install:
+	sudo bash -c "sh <(curl -L https://nixos.org/nix/install) --daemon"
+
+NIXOS_VERSION := "24.11"
+ISO := "latest-nixos-gnome-x86_64-linux.iso"
+
+HOME := env_var('HOME')
+VM := "devvm"
+
+iso:
+	curl -LO https://channels.nixos.org/nixos-{{ NIXOS_VERSION }}/{{ ISO }}
+
+
+init:
+	sudo virt-install \
+	  --name {{ VM }} \
+	  --memory 8192 \
+	  --vcpus 8 \
+	  --disk path=$(pwd)/{{ VM }}.qcow2,size=50,bus=virtio \
+	  --cdrom $(pwd)/{{ ISO }} \
+	  --network bridge=virbr0,model=virtio \
+	  --graphics spice \
+	  --video virtio \
+	  --boot cdrom > /dev/null &
+	# After finishing initializing and rebooting, edit boot settings cdrom -> hd by `just edit`,
+	# and run `just destroy` and `just start`.
+
+start:
+	sudo virsh start {{ VM }}
+
+down:
+    sudo virsh shutdown {{ VM }}
+
+console:
+	sudo virt-viewer {{ VM }}
+
+destroy:
+	sudo virsh destroy {{ VM }}
+
+undefine:
+	sudo virsh undefine {{ VM }}
+
+edit:
+	sudo virsh edit {{ VM }}
