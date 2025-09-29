@@ -37,6 +37,9 @@
           ms-ceintl.vscode-language-pack-ja
           asvetliakov.vscode-neovim
           enkia.tokyo-night
+          github.copilot
+          github.copilot-chat
+          llvm-vs-code-extensions.vscode-clangd
         ];
       };
     };

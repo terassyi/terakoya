@@ -2,7 +2,7 @@
     "explorer.confirmDragAndDrop": false,
     "explorer.confirmDelete": true,
     "explorer.compactFolders": false,
-    "explorer.excludeGitIgnore": true,
+    "explorer.excludeGitIgnore": false,
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
     "files.trimTrailingWhitespace": true,
@@ -32,7 +32,7 @@
     "editor.renderControlCharacters": true,
     "editor.quickSuggestions": "on",
     "diffEditor.experimental.useTrueInlineView": true,
-    "remote.SSH.useLocalServer": true,
+    "remote.SSH.useLocalServer": false,
     "remote.SSH.remotePlatform": {
         "fukdesk": "linux",
         "teradev": "linux"

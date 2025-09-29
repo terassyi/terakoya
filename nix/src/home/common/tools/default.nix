@@ -18,6 +18,8 @@
     ripgrep
     # Syntax-highlighting pager for git
     delta
+    # Fast and modern static website engine
+    hugo
     # Handy way to save and run project-specific commands
     just
     # Lightweight and flexible command-line JSON processor
