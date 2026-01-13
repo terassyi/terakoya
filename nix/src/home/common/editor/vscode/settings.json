@@ -35,7 +35,8 @@
     "remote.SSH.useLocalServer": false,
     "remote.SSH.remotePlatform": {
         "fukdesk": "linux",
-        "teradev": "linux"
+        "teradev": "linux",
+        "dev": "linux"
     },
     "extensions.experimental.affinity": {
         "asvetliakov.vscode-neovim": 1
