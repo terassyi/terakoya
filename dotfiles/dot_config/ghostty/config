@@ -1,0 +1,16 @@
+# Ghostty terminal configuration
+# https://ghostty.org/docs
+
+# Appearance
+background-opacity = 0.9
+background-blur = true
+
+# Shell
+initial-command = zellij
+
+# Font
+font-family = "NotoMono Nerd Font"
+font-size = 14
+
+# Theme
+theme = tokyo-night

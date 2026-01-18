@@ -1,0 +1,29 @@
+# Device-specific data template
+# This file will be used by chezmoi templates to customize configs per device
+# You can override this by creating a .chezmoidata.yaml file
+
+{{- $hostname := .chezmoi.hostname -}}
+{{- $os := .chezmoi.os -}}
+{{- $username := .chezmoi.username -}}
+
+[data]
+    hostname = "{{ $hostname }}"
+    username = "{{ $username }}"
+    os_name = "{{ $os }}"
+    is_darwin = {{ eq $os "darwin" }}
+    is_linux = {{ eq $os "linux" }}
+    has_gui = {{ or (eq $os "darwin") (lookPath "gnome-shell") }}
+
+{{- if eq $hostname "fukdesk" }}
+    name = "terashima"
+    email = "tomoya-terashima@cybozu.co.jp"
+{{- else if eq $hostname "dev" }}
+    name = "terassyi"
+    email = "dev@terassyi.net"
+{{- else if hasPrefix "darwin" $hostname }}
+    name = "terashima"
+    email = "iscale821@gmail.com"
+{{- else }}
+    name = "terassyi"
+    email = "iscale821@gmail.com"
+{{- end }}

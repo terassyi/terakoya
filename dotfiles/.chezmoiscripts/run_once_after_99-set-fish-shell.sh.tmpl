@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Set fish as default shell
+# This script runs once after chezmoi applies all files
+
+set -euo pipefail
+
+# Find fish binary
+FISH_PATH=$(which fish 2>/dev/null || true)
+
+if [ -z "$FISH_PATH" ]; then
+    echo "⚠ fish not found. Skipping default shell setup."
+    exit 0
+fi
+
+# Check if fish is already the default shell
+if [ "$SHELL" = "$FISH_PATH" ]; then
+    echo "✓ fish is already the default shell"
+    exit 0
+fi
+
+echo "→ Setting fish as default shell..."
+
+{{- if eq .chezmoi.os "darwin" }}
+# macOS: Add fish to /etc/shells if not present
+if ! grep -q "$FISH_PATH" /etc/shells 2>/dev/null; then
+    echo "  Adding $FISH_PATH to /etc/shells..."
+    echo "$FISH_PATH" | sudo tee -a /etc/shells > /dev/null
+fi
+# Change default shell (macOS)
+chsh -s "$FISH_PATH"
+{{- else }}
+# Linux: Add fish to /etc/shells if not present
+if ! grep -q "$FISH_PATH" /etc/shells 2>/dev/null; then
+    echo "  Adding $FISH_PATH to /etc/shells..."
+    echo "$FISH_PATH" | sudo tee -a /etc/shells > /dev/null
+fi
+
+# Change default shell using sudo (avoids PAM password prompt in containers)
+sudo chsh -s "$FISH_PATH" "$USER"
+{{- end }}
+
+echo "✓ fish is now the default shell"
+echo ""
+echo "⚠ Please restart your terminal or run:"
+echo "  exec fish"

@@ -1,0 +1,19 @@
+# krew configuration
+# Manage custom indexes and plugins
+
+# Custom indexes (for non-standard plugins)
+indexes:
+  - name: mft
+    url: https://github.com/chez-shanpu/kubectl-mft.git
+
+# Plugins to install
+# Use "index/plugin" format for custom index plugins
+plugins:
+  # Access management
+  - whoami
+
+  # Logs
+  - stern
+
+  # Custom index plugins
+  - mft/mft

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Create standard directory structure on first setup
+
+set -euo pipefail
+
+echo "→ Creating directory structure..."
+
+# Workspace directories
+mkdir -p "$HOME/workspace/github.com/terassyi"
+
+{{- if eq .chezmoi.os "darwin" }}
+# macOS: Create symlink for VSCode settings
+# VSCode on macOS uses ~/Library/Application Support/Code/User/
+# but chezmoi manages ~/.config/Code/User/
+VSCODE_MACOS_DIR="$HOME/Library/Application Support/Code/User"
+VSCODE_CONFIG_DIR="$HOME/.config/Code/User"
+
+if [ ! -e "$VSCODE_MACOS_DIR" ] && [ ! -L "$VSCODE_MACOS_DIR" ]; then
+    mkdir -p "$(dirname "$VSCODE_MACOS_DIR")"
+    mkdir -p "$VSCODE_CONFIG_DIR"
+    ln -s "$VSCODE_CONFIG_DIR" "$VSCODE_MACOS_DIR"
+    echo "✓ Created VSCode symlink for macOS"
+fi
+{{- end }}
+
+echo "✓ Directory structure created"

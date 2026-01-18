@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Apply Nix home-manager configuration
+# This script runs after chezmoi applies files, when nix config changes
+#
+# Hash of nix configuration files (triggers re-run on change):
+# flake.nix: {{ include "nix/flake.nix" | sha256sum }}
+# common/default.nix: {{ include "nix/home/common/default.nix" | sha256sum }}
+# tools/default.nix: {{ include "nix/home/common/tools/default.nix" | sha256sum }}
+# font/default.nix: {{ include "nix/home/common/font/default.nix" | sha256sum }}
+# font/packages.nix: {{ include "nix/home/common/font/packages.nix" | sha256sum }}
+
+set -euo pipefail
+
+# Source Nix environment if not already available
+if ! command -v nix > /dev/null 2>&1; then
+    if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+        . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+    elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
+        . ~/.nix-profile/etc/profile.d/nix.sh
+    else
+        echo "⚠ Nix not found. Skipping home-manager apply."
+        exit 0
+    fi
+fi
+
+NIX_DIR="{{ .chezmoi.sourceDir }}/nix"
+USERNAME="{{ .chezmoi.username }}"
+HOSTNAME=$(hostname -s 2>/dev/null || hostname)
+
+# Override with environment variables if set
+# Example: NIX_CONFIG_NAME="terassyi@devvm" make install
+if [ -n "${NIX_CONFIG_NAME:-}" ]; then
+    echo "  Using NIX_CONFIG_NAME override: $NIX_CONFIG_NAME"
+fi
+
+# Function to get available configurations from flake.nix
+get_available_configs() {
+    # Parse flake.nix to extract configuration names (faster than nix flake show)
+    grep -oE '"[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+"' "$NIX_DIR/flake.nix" 2>/dev/null | tr -d '"' | sort -u
+}
+
+# Function to check if a configuration exists
+config_exists() {
+    local config="$1"
+    get_available_configs | grep -qx "$config"
+}
+
+# Function to find best matching configuration
+find_config() {
+    local available_configs
+    available_configs=$(get_available_configs)
+    
+    # 0. Use environment variable override if set
+    if [ -n "${NIX_CONFIG_NAME:-}" ]; then
+        if echo "$available_configs" | grep -qx "$NIX_CONFIG_NAME"; then
+            echo "$NIX_CONFIG_NAME"
+            return 0
+        else
+            echo "⚠ NIX_CONFIG_NAME='$NIX_CONFIG_NAME' not found in flake.nix" >&2
+        fi
+    fi
+    
+    local primary="${USERNAME}@${HOSTNAME}"
+    
+    # 1. Try exact match: username@hostname
+    if echo "$available_configs" | grep -qx "$primary"; then
+        echo "$primary"
+        return 0
+    fi
+    
+    # 2. Try to find any config matching the username
+    local user_config
+    user_config=$(echo "$available_configs" | grep "^${USERNAME}@" | head -1)
+    
+    if [ -n "$user_config" ]; then
+        echo "$user_config"
+        return 0
+    fi
+    
+    # 3. OS-specific fallbacks
+    {{- if eq .chezmoi.os "darwin" }}
+    # macOS: try darwin1, darwin2
+    for fallback in "darwin1" "darwin2"; do
+        if echo "$available_configs" | grep -qx "${USERNAME}@${fallback}"; then
+            echo "${USERNAME}@${fallback}"
+            return 0
+        fi
+    done
+    {{- else }}
+    # Linux: try dev, devvm
+    for fallback in "dev" "devvm"; do
+        if echo "$available_configs" | grep -qx "${USERNAME}@${fallback}"; then
+            echo "${USERNAME}@${fallback}"
+            return 0
+        fi
+    done
+    {{- end }}
+    
+    # No matching configuration found
+    return 1
+}
+
+echo "→ Applying Nix home-manager configuration..."
+echo "  Username: $USERNAME"
+echo "  Hostname: $HOSTNAME"
+echo "  Nix directory: $NIX_DIR"
+
+cd "$NIX_DIR"
+
+# Find the best configuration
+CONFIG_NAME=$(find_config) || {
+    echo "⚠ No matching Nix configuration found for user '$USERNAME'"
+    echo "  Tried: ${USERNAME}@${HOSTNAME}"
+    echo ""
+    echo "  Available configurations:"
+    get_available_configs | sed 's/^/    /' || echo "    (none)"
+    echo ""
+    echo "  To add a new configuration, edit nix/flake.nix"
+    exit 0
+}
+
+echo "  Using configuration: $CONFIG_NAME"
+nix run home-manager -- switch --flake ".#${CONFIG_NAME}"
+
+echo "✓ Nix home-manager configuration applied"
+
+# Update font cache if fonts were installed
+if command -v fc-cache > /dev/null 2>&1; then
+    echo "→ Updating font cache..."
+    fc-cache -f
+    echo "✓ Font cache updated"
+fi

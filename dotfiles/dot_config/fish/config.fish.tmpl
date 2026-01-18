@@ -1,0 +1,90 @@
+# Fish shell configuration
+# Managed by chezmoi
+
+# Locale settings (required for Powerline symbols)
+set -gx LANG en_US.UTF-8
+set -gx LC_ALL en_US.UTF-8
+
+# Nix paths (must be set early)
+if test -e ~/.nix-profile/etc/profile.d/nix.fish
+    source ~/.nix-profile/etc/profile.d/nix.fish
+end
+fish_add_path $HOME/.nix-profile/bin
+
+# Environment variables
+set -Ux COLORTERM truecolor
+set -Ux SKIM_DEFAULT_COMMAND 'rg --files --hidden --follow --glob "!.git/*"'
+set -Ux SKIM_DEFAULT_OPTIONS "--color=fg:#e6e6fa,fg+:#333333,bg+:#dda0dd,pointer:#ff0000,hl:#dda0dd,hl+:#dda0dd --height=30% --layout=reverse"
+set -Ux GH_REPO_HOME $HOME/workspace/github.com
+
+# mise activation
+if type -q mise
+    mise activate fish | source
+end
+
+# Paths
+{{- if eq .chezmoi.os "darwin" }}
+fish_add_path /usr/local/bin
+{{- end }}
+fish_add_path $HOME/.local/bin
+fish_add_path $HOME/.local/share/aquaproj-aqua/bin
+fish_add_path $HOME/.krew/bin
+fish_add_path $HOME/.local/share/pnpm
+
+# Aliases
+alias .. "cd .."
+alias cl "clear"
+alias ls "eza"
+alias ll "eza -lh"
+alias la "eza -alh"
+
+# Abbreviations for git
+abbr -a g git
+abbr -a ga git add
+abbr -a gc git commit
+abbr -a gd git diff
+abbr -a gl git log
+abbr -a gs git status
+abbr -a gps git push
+abbr -a gpl git pull
+abbr -a gsw git switch
+
+# Abbreviations for kubectl
+abbr -a k kubectl
+
+# Abbreviations for zellij
+abbr -a zl zellij
+abbr -a zgh z ~/workspace/github.com
+
+# Greeting
+function fish_greeting
+end
+
+# Skim key bindings
+if type -q sk
+    # History search
+    bind \cr 'sk_history'
+    # File search with bat preview
+    bind \cf 'sk_bat'
+    # Zoxide directory jump
+    bind \cd 'sk_zoxide'
+    # GitHub repo jump
+    bind \cu 'sk_zoxide_gh'
+    # Open repo in VS Code
+    bind \cv 'sk_code_repo'
+end
+
+# Starship prompt
+if type -q starship
+    starship init fish | source
+end
+
+# Zoxide
+if type -q zoxide
+    zoxide init fish | source
+end
+
+# Tools version management (if using aqua or similar)
+if type -q tools_version_init
+    tools_version_init
+end

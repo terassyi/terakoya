@@ -1,0 +1,207 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "ssh_connections": [
+    {
+      "host": "dev",
+      "args": [],
+      "projects": [
+        {
+          "paths": ["/home/terashima"]
+        }
+      ]
+    }
+  ],
+  "agent_ui_font_size": 13.0,
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "vim_mode": true,
+  "vim": {
+    "use_system_clipboard": "always"
+  },
+  "terminal": {
+    "font_size": 12.0,
+    "font_family": "NotoMono Nerd Font",
+    "shell": "system"
+  },
+  "title_bar": {
+    "show_branch_icon": true,
+    "show_branch_name": true,
+    "show_project_items": true,
+    "show_onboarding_banner": true,
+    "show_user_picture": true,
+    "show_user_menu": true,
+    "show_sign_in": true,
+    "show_menus": true
+  },
+  "editor": {
+    "font_ligatures": true,
+    "tab_size": 2,
+    "hard_tabs": false,
+    "format_on_save": "on",
+    "soft_wrap": "editor_width",
+    "scroll_sensitivity": 1.0,
+    "cursor_blink": true
+  },
+  "buffer_font_fallbacks": ["Noto Sans JP"],
+  "buffer_font_weight": 400,
+  "buffer_line_height": "comfortable",
+  "project_panel": {
+    "hide_gitignore": false,
+    "auto_fold_dirs": false
+  },
+  "base_keymap": "VSCode",
+  "agent": {
+    "enabled": true,
+    "button": true,
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "cursor_blink": false,
+  "buffer_font_family": "NotoMono Nerd Font",
+  "use_on_type_format": true,
+  "show_whitespaces": "all",
+  "ensure_final_newline_on_save": true,
+  "indent_guides": {
+    "enabled": true
+  },
+  "icon_theme": "Zed (Default)",
+  "ui_font_size": 13.0,
+  "buffer_font_size": 13.0,
+  "theme": {
+    "mode": "dark",
+    "light": "Ayu Light",
+    "dark": "Tokyo Night"
+  },
+  "git": {
+    "inline_blame": {
+      "show_commit_summary": true
+    },
+    "branch_picker": {
+      "show_author_name": true
+    }
+  },
+  "languages": {
+    "Rust": {
+      "tab_size": 4,
+      "format_on_save": "on"
+    },
+    "Go": {
+      "tab_size": 4,
+      "format_on_save": "on"
+    },
+    "C": {
+      "tab_size": 2,
+      "format_on_save": "on"
+    },
+    "Zig": {
+      "tab_size": 4,
+      "format_on_save": "on"
+    },
+    "Python": {
+      "tab_size": 4,
+      "formatter": "language_server",
+      "format_on_save": "on"
+    },
+    "Markdown": {
+      "format_on_save": "off",
+      "tab_size": 4
+    },
+    "Make": {
+      "tab_size": 4,
+      "hard_tabs": true,
+      "format_on_save": "on"
+    },
+    "YAML": {
+      "tab_size": 2,
+      "format_on_save": "on"
+    },
+    "TOML": {
+      "tab_size": 2,
+      "format_on_save": "on"
+    },
+    "Fish": {
+      "formatter": {
+        "external": {
+          "command": "fish_indent"
+        }
+      }
+    },
+    "JavaScript": {
+      "tab_size": 2,
+      "formatter": {
+        "external": {
+          "command": "prettier",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  },
+  "file_types": {
+    "C++": ["c"],
+    "Dockerfile": ["Dockerfile*"]
+  },
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy"
+        },
+        "cargo": {
+          "allFeatures": true
+        }
+      }
+    },
+    "clangd": {
+      "arguments": ["--background-index", "--clang-tidy"]
+    }
+  },
+  "formatter": "language_server",
+  "auto_install_extensions": {
+    "asn1": true,
+    "cargotom": true,
+    "dockerfile": true,
+    "docker-compose": false,
+    "git-firefly": true,
+    "github-actions": true,
+    "gosum": true,
+    "gotmpl": true,
+    "just": true,
+    "jsonnet": true,
+    "lua": true,
+    "html": true,
+    "make": true,
+    "nix": true,
+    "proto": true,
+    "tokyo-night": true,
+    "toml": true,
+    "zig": true
+  },
+  "auto_update_extensions": {
+    "asn1": true,
+    "cargotom": true,
+    "dockerfile": true,
+    "docker-compose": false,
+    "git-firefly": true,
+    "github-actions": true,
+    "gosum": true,
+    "gotmpl": false,
+    "just": true,
+    "jsonnet": true,
+    "lua": true,
+    "html": true,
+    "make": true,
+    "nix": true,
+    "proto": true,
+    "tokyo-night": true,
+    "toml": true,
+    "zig": true
+  }
+}

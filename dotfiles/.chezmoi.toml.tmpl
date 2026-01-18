@@ -1,0 +1,22 @@
+# chezmoi configuration
+# https://www.chezmoi.io/reference/configuration-file/
+
+[data]
+    name = "terassyi"
+    email = "iscale821@gmail.com"
+
+[data.os]
+    # Automatically detected by chezmoi
+
+[edit]
+    command = "vim"
+
+[diff]
+    pager = "delta"
+
+[merge]
+    command = "vim"
+    args = ["-d"]
+
+# Device-specific configuration
+# Override with .chezmoidata.yaml in the source directory

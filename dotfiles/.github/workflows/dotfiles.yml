@@ -1,0 +1,123 @@
+name: Dotfiles CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'dotfiles/**'
+      - '.github/workflows/dotfiles.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'dotfiles/**'
+      - '.github/workflows/dotfiles.yml'
+
+jobs:
+  test-docker-ubuntu:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dotfiles
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        run: docker build -t dotfiles .
+
+      - name: Run bootstrap test
+        run: |
+          docker run --rm dotfiles /bin/bash -c "
+            set -e
+            cd /home/testuser/dotfiles
+            ./scripts/bootstrap.sh
+            mise --version
+            chezmoi --version
+          "
+
+      - name: Test chezmoi apply
+        run: |
+          docker run --rm dotfiles /bin/bash -c "
+            set -e
+            cd /home/testuser/dotfiles
+            chezmoi init --source=. --apply
+            chezmoi verify
+          "
+
+      - name: Test fish configuration
+        run: |
+          docker run --rm dotfiles /bin/bash -c "
+            set -e
+            if command -v fish > /dev/null; then
+              fish --version
+              for file in ~/.config/fish/**/*.fish; do
+                if [ -f \"\$file\" ]; then
+                  echo \"Checking \$file\"
+                  fish -n \"\$file\"
+                fi
+              done
+            fi
+          "
+
+      - name: Clean up
+        if: always()
+        run: docker rmi dotfiles || true
+
+  test-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: dotfiles
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise and chezmoi
+        run: |
+          curl https://mise.run | sh
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Test chezmoi dry run
+        run: |
+          chezmoi init --source=. --dry-run
+          chezmoi apply --source=. --dry-run --verbose
+
+      - name: Verify mise configuration
+        run: |
+          mise --version
+          mise ls || true
+
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dotfiles
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          find . -name "*.sh" -type f | while read -r file; do
+            echo "Linting $file"
+            shellcheck "$file"
+          done
+
+      - name: Check file permissions
+        run: |
+          for script in scripts/*.sh; do
+            if [ -f "$script" ] && [ ! -x "$script" ]; then
+              echo "ERROR: $script is not executable"
+              exit 1
+            fi
+          done
+
+      - name: Validate YAML files
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: dotfiles/.github/workflows/
+          strict: true

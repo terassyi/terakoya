@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Install mise tools when .mise.toml changes
+# This script runs after chezmoi applies files, when mise config changes
+#
+# Hash of mise configuration (triggers re-run on change):
+# .mise.toml: {{ include ".mise.toml" | sha256sum }}
+
+set -euo pipefail
+
+MISE_BIN="$HOME/.local/bin/mise"
+
+# Find mise binary
+if command -v mise > /dev/null 2>&1; then
+    MISE_CMD="mise"
+elif [ -f "$MISE_BIN" ]; then
+    MISE_CMD="$MISE_BIN"
+else
+    echo "⚠ mise not found. Skipping tool installation."
+    exit 0
+fi
+
+# Setup shell integration for bash
+setup_bash_integration() {
+    local bashrc="$HOME/.bashrc"
+    if [ -f "$bashrc" ]; then
+        if ! grep -q 'mise activate bash' "$bashrc" 2>/dev/null; then
+            echo "" >> "$bashrc"
+            echo '# mise activation' >> "$bashrc"
+            echo 'eval "$($HOME/.local/bin/mise activate bash)"' >> "$bashrc"
+            echo "✓ Added mise activation to ~/.bashrc"
+        fi
+    fi
+}
+
+# Setup shell integration for fish
+setup_fish_integration() {
+    local fish_config="$HOME/.config/fish/conf.d/mise.fish"
+    if [ -d "$HOME/.config/fish/conf.d" ] || mkdir -p "$HOME/.config/fish/conf.d"; then
+        if [ ! -f "$fish_config" ]; then
+            echo '# mise activation' > "$fish_config"
+            echo 'if command -v mise > /dev/null' >> "$fish_config"
+            echo '    mise activate fish | source' >> "$fish_config"
+            echo 'else if test -f $HOME/.local/bin/mise' >> "$fish_config"
+            echo '    $HOME/.local/bin/mise activate fish | source' >> "$fish_config"
+            echo 'end' >> "$fish_config"
+            echo "✓ Added mise activation to ~/.config/fish/conf.d/mise.fish"
+        fi
+    fi
+}
+
+echo "→ Setting up mise shell integration..."
+setup_bash_integration
+setup_fish_integration
+
+echo "→ Installing mise tools..."
+echo "  This may take a few minutes on first run..."
+
+# Trust mise config files (needed when running from dotfiles source directory)
+$MISE_CMD trust "$HOME/dotfiles/.mise.toml" 2>/dev/null || true
+$MISE_CMD trust "$HOME/.mise.toml" 2>/dev/null || true
+
+# Limit parallel jobs to avoid crashes
+export MISE_JOBS=1
+
+# Change to dotfiles directory where .mise.toml is located
+cd "$HOME/dotfiles"
+
+# Install all tools defined in .mise.toml
+$MISE_CMD install --yes
+
+echo "✓ mise tools installed"
+
+# Setup Rust components if rust is installed
+if $MISE_CMD which rustup > /dev/null 2>&1; then
+    echo ""
+    echo "→ Setting up Rust components..."
+    $MISE_CMD exec -- rustup component add clippy rust-analyzer rustfmt 2>/dev/null || true
+    echo "✓ Rust components installed"
+fi

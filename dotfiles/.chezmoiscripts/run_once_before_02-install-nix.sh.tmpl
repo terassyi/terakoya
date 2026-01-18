@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Install Nix package manager
+# This script runs once before chezmoi applies any files
+
+set -euo pipefail
+
+# Skip if already installed
+if command -v nix > /dev/null 2>&1; then
+    echo "✓ Nix already installed"
+    nix --version
+    exit 0
+fi
+
+# Skip in Docker container (Nix should be pre-installed in Dockerfile)
+if [ -f /.dockerenv ]; then
+    echo "⚠ Running in Docker container"
+    echo "  Nix should be pre-installed in the container image"
+    exit 0
+fi
+
+echo "→ Installing Nix..."
+
+{{- if eq .chezmoi.os "darwin" }}
+# macOS: multi-user installation (default)
+echo "  Installing Nix in multi-user mode (macOS)..."
+curl -L https://nixos.org/nix/install | sh
+
+echo ""
+echo "✓ Nix installed successfully"
+echo ""
+echo "⚠ Please restart your shell or run:"
+echo "  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+
+{{- else if eq .chezmoi.os "linux" }}
+# Linux: multi-user installation with daemon
+echo "  Installing Nix in multi-user mode (Linux)..."
+curl -L https://nixos.org/nix/install | sh -s -- --daemon
+
+echo ""
+echo "✓ Nix installed successfully"
+echo ""
+echo "⚠ Please restart your shell or run:"
+echo "  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+
+{{- end }}

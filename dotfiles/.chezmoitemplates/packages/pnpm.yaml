@@ -1,0 +1,8 @@
+# pnpm global packages
+# Managed by chezmoi
+# These packages are installed via pnpm for better security
+
+packages:
+  # AI CLI tools
+  - "@anthropic-ai/claude-code"
+  - "@google/gemini-cli"

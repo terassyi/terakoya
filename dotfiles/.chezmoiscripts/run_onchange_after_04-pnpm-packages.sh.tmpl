@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Install pnpm global packages when pnpm.yaml changes
+# This script runs after mise tools are installed (04 > 02)
+#
+# Hash of pnpm config (triggers re-run on change):
+# pnpm.yaml: {{ include ".chezmoitemplates/packages/pnpm.yaml" | sha256sum }}
+
+set -euo pipefail
+
+# Add Nix profile to PATH (for yq)
+export PATH="$HOME/.nix-profile/bin:$PATH"
+
+# Activate mise to get pnpm in PATH
+eval "$("$HOME/.local/bin/mise" activate bash)"
+
+# Add pnpm global bin to PATH
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+
+# Check if yq is available
+if ! command -v yq > /dev/null 2>&1; then
+    echo "⚠ yq not found. Skipping pnpm package installation."
+    exit 0
+fi
+
+# Check if pnpm is available
+if ! command -v pnpm > /dev/null 2>&1; then
+    echo "⚠ pnpm not found. Skipping pnpm package installation."
+    exit 0
+fi
+
+echo "→ Installing pnpm global packages..."
+
+# Ensure pnpm global bin directory exists
+mkdir -p "$PNPM_HOME"
+
+# Load pnpm config
+PNPM_YAML=$(cat << 'EOF'
+{{ include ".chezmoitemplates/packages/pnpm.yaml" }}
+EOF
+)
+
+# Install packages using yq
+echo "$PNPM_YAML" | yq -r '.packages[]?' | while read -r package; do
+    if [ -n "$package" ]; then
+        echo "  Installing: $package"
+        pnpm add -g "$package" || echo "    ⚠ Failed to install $package"
+    fi
+done
+
+echo "✓ pnpm global packages installed"

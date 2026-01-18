@@ -1,0 +1,90 @@
+# mise configuration for managing tool versions
+# https://mise.jdx.dev/configuration.html
+#
+# NOTE: CLI utilities (ripgrep, fd, bat, etc.) are now managed by Nix.
+# See nix/home/common/tools/default.nix
+#
+# Tool groups managed by mise:
+#   - languages  : go, node, python, rust
+#   - k8s        : kubectl, kind, helm, kustomize, stern, krew
+#   - protobuf   : protobuf, protoc-gen-go, protoc-gen-go-grpc
+#   - go-dev     : golangci-lint, gofumpt, staticcheck, gopls, goimports, dlv
+#   - cargo      : cargo-edit, cargo-generate, license-generator, cargo-binstall, bpf-linker
+#   - node-dev   : pnpm
+
+[tools]
+# === Language runtimes (version management important) ===
+go = "1.25.5"
+node = "lts"
+python = "3.13"
+rust = "latest"
+
+# === Kubernetes tools (version should match cluster) ===
+kubectl = "1.35.0"
+kind = "latest"
+helm = "latest"
+kustomize = "latest"
+stern = "latest"
+krew = "latest"
+
+# === Protocol Buffers (version compatibility) ===
+protobuf = "latest"
+
+# === Go development tools (Go version dependent) ===
+golangci-lint = "latest"
+gofumpt = "latest"
+staticcheck = "latest"
+
+# === Go packages (require Go runtime - installed in Phase 2) ===
+"go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
+"go:google.golang.org/grpc/cmd/protoc-gen-go-grpc" = "latest"
+"go:golang.org/x/tools/gopls" = "latest"
+"go:golang.org/x/tools/cmd/goimports" = "latest"
+"go:github.com/go-delve/delve/cmd/dlv" = "latest"
+
+# === Node development tools ===
+pnpm = "latest"
+
+# === AI CLI tools ===
+# Installed via pnpm in run_onchange_after_04-pnpm-packages.sh.tmpl
+# "npm:@anthropic-ai/claude-code" = "latest"
+# "npm:@google/gemini-cli" = "latest"
+
+# === Cargo tools (Rust ecosystem - installed in Phase 2) ===
+cargo-binstall = "latest"
+"cargo:cargo-edit" = "latest"
+"cargo:cargo-generate" = "latest"
+"cargo:license-generator" = "latest"
+"cargo:bpf-linker" = "latest"
+
+# === Other version managers ===
+aqua = "latest"
+
+[env]
+# Common environment variables
+_.file = ".env"
+
+[tasks.setup]
+description = "Setup development environment"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing mise tools..."
+mise install
+echo "Setting up Rust components..."
+rustup component add clippy rust-analyzer rustfmt
+echo "Setting up chezmoi..."
+chezmoi init --apply
+"""
+
+[tasks.update]
+description = "Update all tools to latest versions"
+run = "mise upgrade"
+
+[tasks.doctor]
+description = "Check environment health"
+run = "mise doctor"
+
+[settings]
+experimental = true
+jobs = 4  # Parallel jobs for tool installation
