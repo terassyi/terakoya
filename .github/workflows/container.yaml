@@ -1,9 +1,13 @@
 name: Container
 on:
   pull_request:
+    branches: [ main ]
+    paths:
+      - 'containers/**'
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'containers/**'
 jobs:
   build_containers:
     strategy:

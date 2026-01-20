@@ -13,23 +13,30 @@
       "args": [],
       "projects": [
         {
-          "paths": ["/home/terashima"]
+          "paths": [
+            "/home/terashima"
+          ]
         }
       ]
+    },
+    {
+      "host": "dev",
+      "args": [],
+      "projects": []
     }
   ],
   "agent_ui_font_size": 13.0,
   "session": {
-    "trust_all_worktrees": true
+    "trust_all_worktrees": true,
   },
   "vim_mode": true,
   "vim": {
-    "use_system_clipboard": "always"
+    "use_system_clipboard": "always",
   },
   "terminal": {
     "font_size": 12.0,
     "font_family": "NotoMono Nerd Font",
-    "shell": "system"
+    "shell": "system",
   },
   "title_bar": {
     "show_branch_icon": true,
@@ -48,21 +55,23 @@
     "format_on_save": "on",
     "soft_wrap": "editor_width",
     "scroll_sensitivity": 1.0,
-    "cursor_blink": true
+    "cursor_blink": true,
   },
-  "buffer_font_fallbacks": ["Noto Sans JP"],
+  "buffer_font_fallbacks": [
+    "Noto Sans JP"
+  ],
   "buffer_font_weight": 400,
   "buffer_line_height": "comfortable",
   "project_panel": {
     "hide_gitignore": false,
-    "auto_fold_dirs": false
+    "auto_fold_dirs": false,
   },
   "base_keymap": "VSCode",
   "agent": {
     "enabled": true,
     "button": true,
     "favorite_models": [],
-    "model_parameters": []
+    "model_parameters": [],
   },
   "cursor_blink": false,
   "buffer_font_family": "NotoMono Nerd Font",
@@ -70,7 +79,7 @@
   "show_whitespaces": "all",
   "ensure_final_newline_on_save": true,
   "indent_guides": {
-    "enabled": true
+    "enabled": true,
   },
   "icon_theme": "Zed (Default)",
   "ui_font_size": 13.0,
@@ -78,7 +87,7 @@
   "theme": {
     "mode": "dark",
     "light": "Ayu Light",
-    "dark": "Tokyo Night"
+    "dark": "Tokyo Night",
   },
   "git": {
     "inline_blame": {
@@ -88,22 +97,33 @@
       "show_author_name": true
     }
   },
+  // "git_status": true,
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": true,
+    "show_other_hints": true,
+    "show_background": false,
+    "edit_debounce_ms": 700,
+    "scroll_debounce_ms": 50,
+    "toggle_on_modifiers_press": null
+  },
   "languages": {
     "Rust": {
       "tab_size": 4,
-      "format_on_save": "on"
+      "format_on_save": "on",
     },
     "Go": {
       "tab_size": 4,
-      "format_on_save": "on"
+      "format_on_save": "on",
     },
     "C": {
       "tab_size": 2,
-      "format_on_save": "on"
+      "format_on_save": "on",
     },
     "Zig": {
       "tab_size": 4,
-      "format_on_save": "on"
+      "format_on_save": "on",
     },
     "Python": {
       "tab_size": 4,
@@ -112,7 +132,7 @@
     },
     "Markdown": {
       "format_on_save": "off",
-      "tab_size": 4
+      "tab_size": 4,
     },
     "Make": {
       "tab_size": 4,
@@ -139,30 +159,41 @@
       "formatter": {
         "external": {
           "command": "prettier",
-          "arguments": ["--stdin-filepath", "{buffer_path}"]
+          "arguments": [
+            "--stdin-filepath",
+            "{buffer_path}"
+          ]
         }
       }
     }
   },
   "file_types": {
-    "C++": ["c"],
-    "Dockerfile": ["Dockerfile*"]
+    "C++": [
+      "c"
+    ],
+    "Dockerfile": [
+      "Dockerfile*"
+    ]
   },
   "lsp": {
     "rust-analyzer": {
       "initialization_options": {
         "check": {
-          "command": "clippy"
+          "command": "clippy", // rust-analyzer.check.command (default: "check")
         },
         "cargo": {
-          "allFeatures": true
+          "allFeatures": true,
         }
-      }
+      },
     },
     "clangd": {
-      "arguments": ["--background-index", "--clang-tidy"]
+      "arguments": [
+        "--background-index",
+        "--clang-tidy"
+      ]
     }
   },
+  // "lsp_fetch_timeout_ms": 10000,
   "formatter": "language_server",
   "auto_install_extensions": {
     "asn1": true,
@@ -203,5 +234,5 @@
     "tokyo-night": true,
     "toml": true,
     "zig": true
-  }
+  },
 }

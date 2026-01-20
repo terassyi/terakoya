@@ -6,6 +6,12 @@
 {{- $os := .chezmoi.os -}}
 {{- $username := .chezmoi.username -}}
 
+{{- /* Handle GitHub Actions runner environment */ -}}
+{{- if eq $username "runner" -}}
+  {{- $username = "terassyi" -}}
+  {{- $hostname = "dev" -}}
+{{- end -}}
+
 [data]
     hostname = "{{ $hostname }}"
     username = "{{ $username }}"

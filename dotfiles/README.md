@@ -87,18 +87,36 @@ kubectl プラグイン管理
 git clone https://github.com/terassyi/terakoya.git
 cd terakoya/dotfiles
 
-# bootstrap スクリプトを実行
-./scripts/bootstrap.sh
+# インストールを実行
+make install
 ```
 
-このスクリプトは以下を自動的に実行します:
+これは以下を自動的に実行します:
 
-1. 基本パッケージのインストール (curl, git, fish, etc.)
-2. Nix のインストールと home-manager の設定
-3. mise のインストール
-4. chezmoi のインストールと dotfiles の適用
-5. 各種ツールのインストール (Nix → mise → krew → pnpm の順)
-6. fish shell をデフォルトシェルに設定
+1. chezmoi のインストール
+2. 基本パッケージのインストール (curl, git, fish, etc.)
+3. Nix のインストールと home-manager の設定
+4. mise のインストール
+5. dotfiles の適用
+6. 各種ツールのインストール (Nix → mise → krew → pnpm の順)
+7. fish shell をデフォルトシェルに設定
+
+### GITHUB_TOKEN の設定（推奨）
+
+GitHub API のレート制限を回避するため、`GITHUB_TOKEN` を設定することをお勧めします。
+
+```bash
+# オプション 1: gh CLI で認証してから実行
+gh auth login  # 初回のみ必要
+export GITHUB_TOKEN=$(gh auth token)
+make install TARGET=terassyi@dev
+
+# オプション 2: GitHub トークンを直接指定
+export GITHUB_TOKEN=<your-github-token>
+make install TARGET=terassyi@dev
+```
+
+**注**: `GITHUB_TOKEN` がない場合、`mise install` が GitHub API のレート制限に引っかかる可能性があります。
 
 ### Nix 設定名の指定
 
@@ -219,8 +237,6 @@ dotfiles/
 │   ├── git/                          # Git 設定
 │   ├── starship.toml                 # Starship プロンプト設定
 │   └── Code/User/                    # VSCode 設定
-├── scripts/
-│   └── bootstrap.sh                  # セットアップスクリプト
 ├── Dockerfile                        # テスト用 Docker イメージ
 └── Makefile                          # Make タスク
 ```

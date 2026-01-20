@@ -9,7 +9,7 @@
 # font/default.nix: {{ include "nix/home/common/font/default.nix" | sha256sum }}
 # font/packages.nix: {{ include "nix/home/common/font/packages.nix" | sha256sum }}
 
-set -euo pipefail
+set -euox pipefail
 
 # Source Nix environment if not already available
 if ! command -v nix > /dev/null 2>&1; then
@@ -26,6 +26,15 @@ fi
 NIX_DIR="{{ .chezmoi.sourceDir }}/nix"
 USERNAME="{{ .chezmoi.username }}"
 HOSTNAME=$(hostname -s 2>/dev/null || hostname)
+
+# Override environment variables if we're in a CI environment
+# (chezmoi template expands to "runner" in GitHub Actions)
+if [ "$USERNAME" = "runner" ]; then
+    # Use runner@dev config in CI environment
+    NIX_CONFIG_NAME="runner@dev"
+    USERNAME="runner"
+    HOSTNAME="dev"
+fi
 
 # Override with environment variables if set
 # Example: NIX_CONFIG_NAME="terassyi@devvm" make install
@@ -49,7 +58,7 @@ config_exists() {
 find_config() {
     local available_configs
     available_configs=$(get_available_configs)
-    
+
     # 0. Use environment variable override if set
     if [ -n "${NIX_CONFIG_NAME:-}" ]; then
         if echo "$available_configs" | grep -qx "$NIX_CONFIG_NAME"; then
@@ -59,25 +68,23 @@ find_config() {
             echo "⚠ NIX_CONFIG_NAME='$NIX_CONFIG_NAME' not found in flake.nix" >&2
         fi
     fi
-    
+
     local primary="${USERNAME}@${HOSTNAME}"
-    
+
     # 1. Try exact match: username@hostname
     if echo "$available_configs" | grep -qx "$primary"; then
         echo "$primary"
         return 0
     fi
-    
+
     # 2. Try to find any config matching the username
     local user_config
     user_config=$(echo "$available_configs" | grep "^${USERNAME}@" | head -1)
-    
+
     if [ -n "$user_config" ]; then
         echo "$user_config"
         return 0
     fi
-    
-    # 3. OS-specific fallbacks
     {{- if eq .chezmoi.os "darwin" }}
     # macOS: try darwin1, darwin2
     for fallback in "darwin1" "darwin2"; do
@@ -95,7 +102,7 @@ find_config() {
         fi
     done
     {{- end }}
-    
+
     # No matching configuration found
     return 1
 }
@@ -120,7 +127,7 @@ CONFIG_NAME=$(find_config) || {
 }
 
 echo "  Using configuration: $CONFIG_NAME"
-nix run home-manager -- switch --flake ".#${CONFIG_NAME}"
+nix run home-manager -- switch --flake "path:.#${CONFIG_NAME}" --no-write-lock-file
 
 echo "✓ Nix home-manager configuration applied"
 
@@ -129,4 +136,21 @@ if command -v fc-cache > /dev/null 2>&1; then
     echo "→ Updating font cache..."
     fc-cache -f
     echo "✓ Font cache updated"
+fi
+
+# Setup PATH for bash if .bashrc exists
+if [ -f "$HOME/.bashrc" ]; then
+    if ! grep -q 'HOME/.nix-profile/bin' "$HOME/.bashrc" 2>/dev/null; then
+        # Add PATH before the non-interactive check to ensure it's always set
+        # Find the line with "case $- in" and insert before it
+        sed -i "/^case \$- in$/i\\
+# Add Nix profile to PATH\\
+export PATH=\"$HOME/.nix-profile/bin:\${PATH}\"" "$HOME/.bashrc" 2>/dev/null || {
+            # If sed fails, append at the end
+            echo "" >> "$HOME/.bashrc"
+            echo '# Add Nix profile to PATH' >> "$HOME/.bashrc"
+            echo "export PATH=\"$HOME/.nix-profile/bin:\${PATH}\"" >> "$HOME/.bashrc"
+        }
+        echo "✓ Added Nix profile to PATH in ~/.bashrc"
+    fi
 fi

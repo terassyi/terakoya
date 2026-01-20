@@ -17,13 +17,13 @@
 go = "1.25.5"
 node = "lts"
 python = "3.13"
-rust = "latest"
+rust = "1.92.0"
 
 # === Kubernetes tools (version should match cluster) ===
 kubectl = "1.35.0"
-kind = "latest"
-helm = "latest"
-kustomize = "latest"
+kind = "0.31.0"
+helm = "4.0.5"
+kustomize = "5.8.0"
 stern = "latest"
 krew = "latest"
 
@@ -56,6 +56,7 @@ cargo-binstall = "latest"
 "cargo:cargo-generate" = "latest"
 "cargo:license-generator" = "latest"
 "cargo:bpf-linker" = "latest"
+"cargo:rust-script" = "latest"
 
 # === Other version managers ===
 aqua = "latest"

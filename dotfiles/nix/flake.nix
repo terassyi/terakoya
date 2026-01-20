@@ -64,6 +64,13 @@
             email = "dev@terassyi.net";
           };
 
+          # GitHub Actions / CI runner (no GUI)
+          "runner@dev" = mkHomeConfiguration {
+            gui = "none";
+            username = "runner";
+            email = "dev@terassyi.net";
+          };
+
           # Development VM with GNOME
           "terassyi@devvm" = mkHomeConfiguration {
             gui = "gnome";

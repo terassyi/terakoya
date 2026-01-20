@@ -7,27 +7,63 @@
 
 set -euo pipefail
 
-MISE_BIN="$HOME/.local/bin/mise"
+echo "→ Setting up mise..."
 
-# Find mise binary
+# Source .bashrc to get PATH updates from nix-apply
+echo "  Sourcing ~/.bashrc..."
+if [ -f "$HOME/.bashrc" ]; then
+    source "$HOME/.bashrc"
+    echo "  ✓ .bashrc sourced"
+else
+    echo "  ⚠ ~/.bashrc not found at $HOME/.bashrc"
+fi
+
+# Show PATH for debugging
+echo "  Current PATH: $PATH"
+
+# Find mise binary (installed via Nix)
+echo ""
+echo "→ Searching for mise command..."
 if command -v mise > /dev/null 2>&1; then
     MISE_CMD="mise"
-elif [ -f "$MISE_BIN" ]; then
-    MISE_CMD="$MISE_BIN"
+    echo "✓ mise found: $(command -v mise)"
+    mise --version
 else
-    echo "⚠ mise not found. Skipping tool installation."
-    exit 0
+    echo "⚠ 'command -v mise' failed"
+    echo "  Checking ~/.nix-profile/bin/mise directly..."
+    if [ -f "$HOME/.nix-profile/bin/mise" ]; then
+        echo "  ✓ Binary exists at ~/.nix-profile/bin/mise"
+        MISE_CMD="$HOME/.nix-profile/bin/mise"
+        "$MISE_CMD" --version
+    else
+        echo "  ✗ mise binary not found anywhere"
+        echo "  Skipping tool installation."
+        exit 0
+    fi
 fi
+
+echo ""
 
 # Setup shell integration for bash
 setup_bash_integration() {
     local bashrc="$HOME/.bashrc"
     if [ -f "$bashrc" ]; then
+        # Add mise activation if not already present
         if ! grep -q 'mise activate bash' "$bashrc" 2>/dev/null; then
             echo "" >> "$bashrc"
             echo '# mise activation' >> "$bashrc"
-            echo 'eval "$($HOME/.local/bin/mise activate bash)"' >> "$bashrc"
+            echo 'if command -v mise > /dev/null 2>&1; then' >> "$bashrc"
+            echo '  eval "$(mise activate bash)"' >> "$bashrc"
+            echo 'fi' >> "$bashrc"
             echo "✓ Added mise activation to ~/.bashrc"
+        fi
+        
+        # Add Go bin path if not already present
+        if ! grep -q 'go/bin' "$bashrc" 2>/dev/null; then
+            echo "" >> "$bashrc"
+            echo '# Add Go tools to PATH' >> "$bashrc"
+            echo 'export PATH="$HOME/go/bin:${PATH}"' >> "$bashrc"
+            echo "✓ Added Go bin path to ~/.bashrc"
         fi
     fi
 }
@@ -40,8 +76,6 @@ setup_fish_integration() {
             echo '# mise activation' > "$fish_config"
             echo 'if command -v mise > /dev/null' >> "$fish_config"
             echo '    mise activate fish | source' >> "$fish_config"
-            echo 'else if test -f $HOME/.local/bin/mise' >> "$fish_config"
-            echo '    $HOME/.local/bin/mise activate fish | source' >> "$fish_config"
             echo 'end' >> "$fish_config"
             echo "✓ Added mise activation to ~/.config/fish/conf.d/mise.fish"
         fi
@@ -52,28 +86,145 @@ echo "→ Setting up mise shell integration..."
 setup_bash_integration
 setup_fish_integration
 
+# Setup GITHUB_TOKEN if not already set
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "→ Setting up GITHUB_TOKEN..."
+
+    # Ensure Nix is available
+    if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+        . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+    fi
+
+    # Check if gh is available
+    if command -v gh &> /dev/null; then
+        # Check if gh is authenticated
+        if ! gh auth status &> /dev/null 2>&1; then
+            echo ""
+            echo "⚠ gh is not authenticated."
+            echo "  GitHub API rate limits will apply without authentication."
+            echo ""
+            echo "  Launching GitHub authentication..."
+            echo ""
+
+            # Run gh auth login interactively
+            gh auth login
+
+            # Try to get token after login
+            if gh auth status &> /dev/null 2>&1; then
+                TOKEN=$(gh auth token 2>/dev/null || true)
+                if [ -n "$TOKEN" ]; then
+                    export GITHUB_TOKEN="$TOKEN"
+                    echo "✓ GITHUB_TOKEN set from gh CLI authentication"
+                fi
+            else
+                echo "⚠ gh authentication failed or was cancelled."
+                echo "  GitHub API rate limits will apply without GITHUB_TOKEN."
+            fi
+        else
+            # Get token from gh
+            TOKEN=$(gh auth token 2>/dev/null || true)
+            if [ -n "$TOKEN" ]; then
+                export GITHUB_TOKEN="$TOKEN"
+                echo "✓ GITHUB_TOKEN set from gh CLI authentication"
+            fi
+        fi
+    else
+        echo ""
+        echo "⚠ gh command not found."
+        echo "  GitHub API rate limits will apply without GITHUB_TOKEN."
+        echo "  Set GITHUB_TOKEN environment variable manually if needed:"
+        echo "    export GITHUB_TOKEN=<your-token>"
+        echo ""
+    fi
+fi
+
 echo "→ Installing mise tools..."
 echo "  This may take a few minutes on first run..."
-
-# Trust mise config files (needed when running from dotfiles source directory)
-$MISE_CMD trust "$HOME/dotfiles/.mise.toml" 2>/dev/null || true
-$MISE_CMD trust "$HOME/.mise.toml" 2>/dev/null || true
 
 # Limit parallel jobs to avoid crashes
 export MISE_JOBS=1
 
+# Trust mise config files (needed when running from dotfiles source directory)
+echo ""
+echo "→ Trusting mise configuration files..."
+
+# Get dotfiles directory from chezmoi sourceDir (where .mise.toml is)
+DOTFILES_DIR="{{ .chezmoi.sourceDir }}"
+
+echo "  DOTFILES_DIR: $DOTFILES_DIR"
+echo "  Current directory: $(pwd)"
+
 # Change to dotfiles directory where .mise.toml is located
-cd "$HOME/dotfiles"
+cd "$DOTFILES_DIR"
+
+echo "→ Checking .mise.toml..."
+if [ -f .mise.toml ]; then
+    echo "✓ .mise.toml found"
+    echo "  Contents:"
+    grep "^\[" .mise.toml || echo "  (no tool sections found)"
+else
+    echo "⚠ .mise.toml not found in $DOTFILES_DIR"
+    echo "  Current directory: $(pwd)"
+    ls -la . | head -20
+fi
 
 # Install all tools defined in .mise.toml
-$MISE_CMD install --yes
+echo ""
+echo "→ Running: $MISE_CMD install --yes"
+echo "  Working directory: $(pwd)"
+if [ -f .mise.toml ]; then
+    echo "  .mise.toml exists: yes"
+else
+    echo "  .mise.toml exists: NO (this will fail!)"
+fi
+echo ""
 
-echo "✓ mise tools installed"
+if $MISE_CMD install --yes; then
+    echo ""
+    echo "✓ mise tools installed successfully"
+    echo "  Installed tools:"
+    $MISE_CMD ls --installed 2>/dev/null | head -10 || echo "  (could not list installed tools)"
+    
+    # Show Go environment if Go is installed
+    if $MISE_CMD which go > /dev/null 2>&1; then
+        echo ""
+        echo "→ Go environment:"
+        GOROOT_VAL=$($MISE_CMD exec -- go env GOROOT 2>/dev/null || echo "")
+        GOPATH_VAL=$($MISE_CMD exec -- go env GOPATH 2>/dev/null || echo "")
+        GO_VERSION=$($MISE_CMD exec -- go version 2>/dev/null || echo "unknown")
+        
+        echo "  GOROOT: ${GOROOT_VAL:-not set}"
+        echo "  GOPATH: ${GOPATH_VAL:-$HOME/go (default)}"
+        echo "  $GO_VERSION"
+        
+        # Ensure GOPATH is set in bashrc for compatibility
+        if ! grep -q 'GOPATH' "$HOME/.bashrc" 2>/dev/null; then
+            echo "" >> "$HOME/.bashrc"
+            echo '# Set GOPATH to default if not already set' >> "$HOME/.bashrc"
+            echo 'export GOPATH="${GOPATH:-$HOME/go}"' >> "$HOME/.bashrc"
+            echo "  ✓ Added default GOPATH to ~/.bashrc"
+        fi
+    fi
+else
+    EXIT_CODE=$?
+    echo ""
+    echo "✗ mise install exited with code: $EXIT_CODE"
+    echo "  This may indicate missing tools or permission issues"
+    echo "  Attempting to continue anyway..."
+fi
 
 # Setup Rust components if rust is installed
 if $MISE_CMD which rustup > /dev/null 2>&1; then
     echo ""
     echo "→ Setting up Rust components..."
-    $MISE_CMD exec -- rustup component add clippy rust-analyzer rustfmt 2>/dev/null || true
-    echo "✓ Rust components installed"
+    if $MISE_CMD exec -- rustup component add clippy rust-analyzer rustfmt 2>&1; then
+        echo "✓ Rust components installed"
+    else
+        EXIT_CODE=$?
+        echo "⚠ Rust component setup failed with exit code: $EXIT_CODE"
+        echo "  This is optional and can be set up manually later"
+    fi
+else
+    echo ""
+    echo "ℹ rustup not found (Rust may not be installed)"
 fi
