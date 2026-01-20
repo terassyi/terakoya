@@ -1,0 +1,38 @@
+fish
+build-essential
+curl
+wget
+git
+ca-certificates
+gnupg
+lsb-release
+pkg-config
+libssl-dev
+cmake
+unzip
+locales
+# Python build dependencies
+zlib1g-dev
+libbz2-dev
+libreadline-dev
+libsqlite3-dev
+libncursesw5-dev
+xz-utils
+tk-dev
+libxml2-dev
+libxmlsec1-dev
+libffi-dev
+liblzma-dev
+# eBPF development dependencies
+llvm
+clang
+clangd
+libbpf-dev
+libelf-dev
+linux-tools-generic
+# Lua
+luajit
+lua5.4
+liblua5.4-dev
+# Font utilities (Nerd Fonts installed via script)
+fontconfig

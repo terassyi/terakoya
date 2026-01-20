@@ -1,0 +1,47 @@
+#!/bin/bash
+# vim: set ft=bash:
+
+set -eu
+
+echo "==> Setting up GITHUB_TOKEN..."
+
+# Skip if GITHUB_TOKEN is already set
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    echo "GITHUB_TOKEN is already set, skipping..."
+    exit 0
+fi
+
+# Source Nix profile to access gh command
+if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+    . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+fi
+
+# Check if gh is available
+if ! command -v gh &> /dev/null; then
+    echo "gh command not found, skipping GITHUB_TOKEN setup..."
+    exit 0
+fi
+
+# Check if gh is authenticated
+if ! gh auth status &> /dev/null; then
+    echo "gh is not authenticated, skipping GITHUB_TOKEN setup..."
+    echo "Run 'gh auth login' to authenticate."
+    exit 0
+fi
+
+# Export GITHUB_TOKEN for subsequent scripts
+TOKEN=$(gh auth token)
+export GITHUB_TOKEN="$TOKEN"
+
+# Also add to profile for future sessions
+PROFILE_FILE="$HOME/.profile"
+if ! grep -q 'GITHUB_TOKEN.*gh auth token' "$PROFILE_FILE" 2>/dev/null; then
+    echo '' >> "$PROFILE_FILE"
+    echo '# GitHub Token from gh CLI' >> "$PROFILE_FILE"
+    echo 'if command -v gh &> /dev/null && gh auth status &> /dev/null 2>&1; then' >> "$PROFILE_FILE"
+    echo '    export GITHUB_TOKEN="$(gh auth token)"' >> "$PROFILE_FILE"
+    echo 'fi' >> "$PROFILE_FILE"
+    echo "Added GITHUB_TOKEN to $PROFILE_FILE"
+fi
+
+echo "GITHUB_TOKEN is set."

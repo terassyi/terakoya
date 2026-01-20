@@ -137,6 +137,9 @@
             "terashima@darwin1" =
               mkHomeConfiguration system "mac" "darwin1" "terashima"
               userInfo.email;
+            "terashima@darwin2" =
+              mkHomeConfiguration system "mac" "darwin2" "terashima"
+              userInfo.email;
             "terassyi@teradev" =
               mkHomeConfiguration system "gnome" "teradev" userInfo.name
               userInfo.email;

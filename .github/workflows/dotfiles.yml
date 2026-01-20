@@ -1,0 +1,97 @@
+name: Dotfiles CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'dotfiles/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'dotfiles/**'
+  workflow_dispatch:
+
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make curl git
+
+      - name: Run full install
+        run: |
+          cd dotfiles
+          make install TARGET=runner@dev
+
+      - name: Debug - Show shell config files
+        run: |
+          echo "=== ~/.bashrc ==="
+          cat ~/.bashrc
+          echo ""
+          echo "=== ~/.config/fish/config.fish ==="
+          cat ~/.config/fish/config.fish || echo "File not found"
+          echo ""
+          echo "=== ~/.mise.toml ==="
+          cat ~/.mise.toml || echo "~/.mise.toml not found"
+          echo ""
+          echo "=== Current PATH (before sourcing) ==="
+          echo "$PATH"
+          echo ""
+          echo "=== After sourcing ~/.bashrc ==="
+          source ~/.bashrc
+          echo "$PATH"
+          echo ""
+          echo "=== Verify Nix profile exists ==="
+          ls -la ~/.nix-profile/bin/ | head -10 || echo "~/.nix-profile/bin does not exist"
+
+      - name: Verify chezmoi
+        run: |
+          chezmoi --version
+          chezmoi verify --source=./dotfiles
+
+      - name: Verify Nix tools
+        run: |
+          source ~/.bashrc
+          starship --version
+          rg --version
+
+      - name: Verify mise
+        run: |
+          source ~/.bashrc
+          mise --version
+
+      - name: Verify dotfiles applied
+        run: |
+          ls -la ~/.config/fish/
+          ls -la ~/.config/nvim/
+          test -f ~/.config/starship.toml
+
+      - name: Test fish configuration
+        run: |
+          fish --version
+          fish -n ~/.config/fish/config.fish
+
+  test-docker:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: |
+          docker build -t dotfiles-test -f dotfiles/Dockerfile dotfiles
+
+      - name: Run make install in container
+        run: |
+          docker run --rm \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            dotfiles-test \
+            make install TARGET=terassyi@dev
+        # If this step succeeds, make install completed successfully

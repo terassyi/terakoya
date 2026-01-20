@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Install system packages before applying dotfiles
+# This script runs once before chezmoi applies any files
+
+set -euo pipefail
+
+{{- if eq .chezmoi.os "linux" }}
+echo "→ Installing Linux system packages..."
+
+# Set non-interactive mode to avoid prompts (e.g., tzdata)
+export DEBIAN_FRONTEND=noninteractive
+
+# Pre-configure timezone to avoid tzdata prompts
+export TZ=Asia/Tokyo
+sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+echo $TZ | sudo tee /etc/timezone > /dev/null
+
+# APT packages for Debian/Ubuntu
+# Read from apt.txt, filter comments and empty lines, convert to space-separated list
+PACKAGES=$(cat << 'APTEOF' | grep -v '^#' | grep -v '^$' | tr '\n' ' '
+{{ include ".chezmoitemplates/packages/apt.txt" }}
+APTEOF
+)
+
+echo "DEBUG: PACKAGES='$PACKAGES'"
+
+if [ -z "$PACKAGES" ]; then
+    echo "ERROR: No packages to install. Check apt.txt template."
+    exit 1
+fi
+
+sudo apt-get update
+sudo apt-get install -y $PACKAGES
+
+# Generate UTF-8 locale
+echo "→ Configuring locale..."
+sudo sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+sudo sed -i 's/# ja_JP.UTF-8 UTF-8/ja_JP.UTF-8 UTF-8/' /etc/locale.gen
+sudo locale-gen
+sudo update-locale LANG=en_US.UTF-8
+
+echo "✓ Linux system packages installed"
+
+# Install Docker if not in container
+install_docker_linux() {
+    if command -v docker > /dev/null 2>&1; then
+        echo "✓ Docker already installed"
+        docker --version
+        return 0
+    fi
+
+    # Skip Docker installation in container (Docker-in-Docker not recommended)
+    if [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        echo "⚠ Running in container, skipping Docker installation"
+        return 0
+    fi
+
+    echo "→ Installing Docker..."
+
+    # Install prerequisites
+    sudo apt-get install -y ca-certificates curl gnupg
+
+    # Add Docker's official GPG key
+    sudo install -m 0755 -d /etc/apt/keyrings
+    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    fi
+
+    # Add Docker repository
+    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+        echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    fi
+
+    # Install Docker packages
+    sudo apt-get update
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Add current user to docker group
+    if ! groups | grep -q docker; then
+        sudo usermod -aG docker "$USER"
+        echo "✓ Added $USER to docker group"
+        echo "⚠ Please log out and log back in for group changes to take effect"
+    fi
+
+    echo "✓ Docker installed"
+    docker --version
+}
+
+install_docker_linux
+
+{{- else if eq .chezmoi.os "darwin" }}
+echo "→ Installing macOS packages..."
+
+# Install fish shell
+if ! command -v fish > /dev/null 2>&1; then
+    echo "  Downloading fish.pkg..."
+    curl -LO https://github.com/fish-shell/fish-shell/releases/latest/download/fish.pkg
+    sudo installer -pkg fish.pkg -target /
+    rm fish.pkg
+    echo "✓ fish installed"
+else
+    echo "✓ fish already installed"
+fi
+
+# Check Xcode Command Line Tools
+if ! xcode-select -p > /dev/null 2>&1; then
+    echo "⚠ Xcode Command Line Tools not found"
+    echo "  Install with: xcode-select --install"
+else
+    echo "✓ Xcode Command Line Tools installed"
+fi
+
+{{- end }}

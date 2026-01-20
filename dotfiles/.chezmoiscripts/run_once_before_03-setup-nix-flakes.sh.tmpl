@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Setup Nix flakes and home-manager
+# This script runs once before chezmoi applies any files
+
+set -euo pipefail
+
+# Source Nix environment if not already available
+if ! command -v nix > /dev/null 2>&1; then
+    if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+        . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+    elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
+        . ~/.nix-profile/etc/profile.d/nix.sh
+    else
+        echo "⚠ Nix not found. Skipping flakes setup."
+        exit 0
+    fi
+fi
+
+echo "→ Setting up Nix flakes..."
+
+# Enable flakes if not already enabled
+mkdir -p ~/.config/nix
+if ! grep -q "experimental-features" ~/.config/nix/nix.conf 2>/dev/null; then
+    echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+    echo "✓ Flakes enabled in ~/.config/nix/nix.conf"
+else
+    echo "✓ Flakes already enabled"
+fi
+
+echo ""
+echo "→ Installing home-manager channel..."
+nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+nix-channel --update
+echo "✓ home-manager channel added"
+
+echo ""
+echo "✓ Nix flakes setup complete"

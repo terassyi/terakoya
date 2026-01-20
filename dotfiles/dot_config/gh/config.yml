@@ -1,0 +1,7 @@
+# GitHub CLI configuration
+# Managed by chezmoi
+
+editor: vim
+git_protocol: ssh
+prompt: enabled
+pager: delta

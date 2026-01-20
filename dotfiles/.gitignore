@@ -1,0 +1,27 @@
+# .gitignore for dotfiles
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Chezmoi
+.chezmoidata.yaml
+
+# Mise
+.mise.local.toml
+
+# Nix
+nix/flake.lock
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+bin/

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Install krew plugins when krew.yaml changes
+# This script runs after mise tools are installed
+#
+# Hash of krew config (triggers re-run on change):
+# krew.yaml: {{ include ".chezmoitemplates/packages/krew.yaml" | sha256sum }}
+
+set -euo pipefail
+
+# Get dotfiles directory from chezmoi
+DOTFILES_DIR="{{ .chezmoi.sourceDir }}"
+
+# Change to dotfiles directory (required for mise to work)
+cd "$DOTFILES_DIR"
+
+# Source bashrc to activate mise and get proper PATH
+if [ -f "$HOME/.bashrc" ]; then
+    source "$HOME/.bashrc"
+fi
+
+# Clear command cache to pick up newly available commands from bashrc
+hash -r
+
+# Add Nix profile to PATH (for yq)
+export PATH="$HOME/.nix-profile/bin:$PATH"
+
+# Add krew to PATH (may already be added by mise activate in bashrc)
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+echo "→ Checking dependencies for krew plugin installation..."
+
+# Check if yq is available
+if ! command -v yq > /dev/null 2>&1; then
+    echo "✗ yq not found. yq is required for krew plugin installation."
+    exit 1
+fi
+
+# Check if kubectl is available
+if ! command -v kubectl > /dev/null 2>&1; then
+    echo "✗ kubectl not found. kubectl is required for krew plugin installation."
+    exit 1
+fi
+
+# Check if krew binary is available (from mise)
+if ! command -v krew > /dev/null 2>&1; then
+    echo "✗ krew not found. krew is required for plugin installation."
+    exit 1
+fi
+
+# Initialize krew if not already done
+if [ ! -d "${KREW_ROOT:-$HOME/.krew}" ]; then
+    echo "→ Initializing krew..."
+    krew update
+fi
+
+echo "→ Installing krew plugins..."
+
+# Load krew config
+KREW_YAML=$(cat << 'EOF'
+{{ include ".chezmoitemplates/packages/krew.yaml" }}
+EOF
+)
+
+# Update krew index
+krew update
+
+# Add custom indexes using yq
+echo "  Adding custom indexes..."
+echo "$KREW_YAML" | yq -r '.indexes[]? | "\(.name) \(.url)"' | while read -r name url; do
+    if [ -n "$name" ] && [ -n "$url" ]; then
+        echo "    Index: $name -> $url"
+        krew index add "$name" "$url" 2>/dev/null
+    fi
+done
+
+# Install plugins using yq
+echo "  Installing plugins..."
+echo "$KREW_YAML" | yq -r '.plugins[]?' | while read -r plugin; do
+    if [ -n "$plugin" ]; then
+        echo "    Installing: $plugin"
+        krew install "$plugin" 2>/dev/null
+    fi
+done
+
+echo "✓ krew plugins installed"
