@@ -46,5 +46,7 @@
     wl-clipboard
     # Extraction utility for archives compressed in .zip format
     unzip
+    # Fast, disk space efficient package manager for JavaScript
+    pnpm
   ];
 }

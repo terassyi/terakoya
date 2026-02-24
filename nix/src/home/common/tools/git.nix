@@ -7,7 +7,13 @@
 
     delta.enable = true;
 
-    extraConfig = { pull = { rebase = true; }; };
+    extraConfig = {
+      pull = { rebase = true; };
+      commit.gpgsign = true;
+      tag.gpgsign = true;
+      gpg.format = "ssh";
+      user.signingkey = "~/.ssh/id_ed25519.pub";
+    };
   };
 
   # GitHub CLI tool
