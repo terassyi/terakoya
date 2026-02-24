@@ -25,6 +25,12 @@ tomei + chezmoi による dotfiles 管理、NixOS システム設定、Kubernete
   - `dot_config/tomei/` - tomei CUE マニフェスト（ツール定義）
   - `dot_config/fish/` - fish shell 設定テンプレート
 
+## ワークフロー
+
+- **コミットはユーザーの指示があるまで行わない**
+- ローカルで `tomei apply`, `tomei init`, `chezmoi apply`, `chezmoi init` を実行しない
+- テストはコンテナ内（`make test`）で行う
+
 ## コードスタイル
 
 - Nix: `nixfmt` でフォーマット

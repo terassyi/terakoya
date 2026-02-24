@@ -11,12 +11,10 @@ RUN useradd -m -s /usr/bin/fish testuser \
 # chezmoi
 RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
 
-# tomei
-RUN curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh -o /tmp/install-tomei.sh \
-    && TOMEI_INSTALL_DIR=/usr/local/bin sh /tmp/install-tomei.sh \
-    && rm /tmp/install-tomei.sh
-
 USER testuser
+
+# tomei
+RUN curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
 WORKDIR /home/testuser
 ENV LANG=en_US.UTF-8
 ENV PATH="/home/testuser/.local/bin:${PATH}"

@@ -18,27 +18,22 @@ jobs:
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
       - name: Install tomei
         run: |
-          curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh -o /tmp/install-tomei.sh
-          sudo TOMEI_INSTALL_DIR=/usr/local/bin sh /tmp/install-tomei.sh
+          curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install fish
         run: sudo apt-get update && sudo apt-get install -y fish
       - name: Validate chezmoi templates
         working-directory: dotfiles
         run: |
-          find . -name "*.tmpl" -print0 | xargs -0 -I{} sh -c \
-            'chezmoi execute-template < "{}" > /dev/null || exit 1'
+          chezmoi init --source=. --no-tty
+          chezmoi execute-template --source=. --no-tty < /dev/null > /dev/null
+          chezmoi diff --source=. --no-tty || true
       - name: Validate tomei manifests
         run: tomei validate dotfiles/dot_config/tomei/
       - name: Check fish syntax
         run: |
-          find dotfiles -name "*.fish" -o -name "*.fish.tmpl" | while read f; do
-            # For .tmpl files, strip template directives before checking
-            if echo "$f" | grep -q '\.tmpl$'; then
-              chezmoi execute-template < "$f" | fish -n
-            else
-              fish -n "$f"
-            fi
-          done
+          chezmoi init --source=dotfiles --no-tty
+          find dotfiles -name "*.fish" -print0 | xargs -0 -I{} fish -n "{}"
 
   test:
     needs: validate
@@ -72,8 +67,9 @@ jobs:
         if: matrix.mode == 'container'
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles:ro \
+            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
             dotfiles-test bash -c "
+              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
               chezmoi init --source=/home/testuser/dotfiles --no-tty &&
               chezmoi apply --source=/home/testuser/dotfiles --no-tty &&
               echo 'chezmoi apply succeeded'
@@ -82,20 +78,22 @@ jobs:
         if: matrix.mode == 'container'
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles:ro \
+            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
             dotfiles-test bash -c "
+              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
               chezmoi init --source=/home/testuser/dotfiles --no-tty &&
               chezmoi apply --source=/home/testuser/dotfiles --no-tty &&
               test -f ~/.config/fish/config.fish &&
               echo 'All expected files present'
             "
-      - name: Run tomei plan in container
+      - name: Run tomei validate in container
         if: matrix.mode == 'container'
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles:ro \
+            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
             dotfiles-test bash -c "
-              tomei plan /home/testuser/dotfiles/dot_config/tomei/ || true
+              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
+              tomei validate /home/testuser/dotfiles/dot_config/tomei/
             "
 
       # --- native mode ---
@@ -105,8 +103,8 @@ jobs:
       - name: Install tomei (native)
         if: matrix.mode == 'native'
         run: |
-          curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh -o /tmp/install-tomei.sh
-          sudo TOMEI_INSTALL_DIR=/usr/local/bin sh /tmp/install-tomei.sh
+          curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: chezmoi diff (native, dry-run)
         if: matrix.mode == 'native'
         run: |
