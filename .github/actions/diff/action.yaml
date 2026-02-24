@@ -5,16 +5,16 @@ inputs:
     required: true
 outputs:
   diff-count:
-    value: ${{ steps.diff.outputs.all_changed_files_count }}
+    value: ${{ steps.diff.outputs.diff_count }}
 runs:
   using: composite
   steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
     with:
       fetch-depth: 0
   - id: diff
-    uses: tj-actions/changed-files@v4
     name: Check diff
-    with:
-      dir_names: ${{ inputs.subdir }}
-
+    shell: bash
+    run: |
+      COUNT=$(git diff --name-only origin/${{ github.base_ref }}..HEAD -- ${{ inputs.subdir }} | wc -l | tr -d ' ')
+      echo "diff_count=${COUNT}" >> $GITHUB_OUTPUT

@@ -1,6 +1,0 @@
----
-- hosts: master[0]
-  gather_facts: true
-  become: true
-  roles:
-    - configure_nodes/init_master

@@ -1,9 +1,13 @@
 name: Container
 on:
   pull_request:
+    paths:
+      - "containers/**"
   push:
     branches:
       - main
+    paths:
+      - "containers/**"
 jobs:
   build_containers:
     strategy:
@@ -19,10 +23,8 @@ jobs:
             container-image: bpf-utils
             platform: linux/amd64
     runs-on: ubuntu-24.04
-    env:
-      go-version: "1.23.4"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check diff
         uses: ./.github/actions/diff
         id: diff
