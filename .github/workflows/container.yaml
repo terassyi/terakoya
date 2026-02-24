@@ -56,7 +56,7 @@ jobs:
         run: echo "TAG=`cat ${{ matrix.job.dir}}/TAG`" >> $GITHUB_OUTPUT
         if: ${{ steps.diff.outputs.diff-count != '0' }}
       - name: Build and Push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ steps.diff.outputs.diff-count != '0' }}
         with:
           context: ${{ matrix.job.dir }}
