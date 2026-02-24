@@ -32,7 +32,11 @@
       "Bash(gh pr merge:*)",
       "Bash(nix-collect-garbage:*)",
       "Bash(rm -rf:*)",
-      "Bash(sudo:*)"
+      "Bash(sudo:*)",
+      "Bash(tomei apply:*)",
+      "Bash(tomei init:*)",
+      "Bash(chezmoi apply:*)",
+      "Bash(chezmoi init:*)"
     ]
   }
 }

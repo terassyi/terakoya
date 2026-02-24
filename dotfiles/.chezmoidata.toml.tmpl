@@ -1,0 +1,41 @@
+{{- $hostname := .chezmoi.hostname -}}
+{{- $os := .chezmoi.os -}}
+{{- $username := .chezmoi.username -}}
+
+{{- if eq $username "runner" -}}
+  {{- $username = "testuser" -}}
+  {{- $hostname = "dev" -}}
+{{- end -}}
+
+{{- $gui := "none" -}}
+{{- if eq $os "darwin" -}}
+  {{- $gui = "mac" -}}
+{{- else if or (eq $hostname "teracarbon") (eq $hostname "teradev") -}}
+  {{- $gui = "hyprland" -}}
+{{- else if eq $hostname "devvm" -}}
+  {{- $gui = "gnome" -}}
+{{- end -}}
+
+{{- $gitName := "terassyi" -}}
+{{- $gitEmail := "iscale821@gmail.com" -}}
+{{- if eq $hostname "fukdesk" -}}
+  {{- $gitName = "terashima" -}}
+  {{- $gitEmail = "tomoya-terashima@cybozu.co.jp" -}}
+{{- else if eq $hostname "dev" -}}
+  {{- $gitEmail = "dev@terassyi.net" -}}
+{{- else if or (eq $hostname "darwin1") (eq $hostname "darwin2") -}}
+  {{- $gitName = "terashima" -}}
+{{- end -}}
+
+[data]
+hostname  = "{{ $hostname }}"
+username  = "{{ $username }}"
+os        = "{{ $os }}"
+gui       = "{{ $gui }}"
+is_darwin = {{ eq $os "darwin" }}
+is_linux  = {{ eq $os "linux" }}
+has_gui   = {{ ne $gui "none" }}
+
+[data.git]
+name  = "{{ $gitName }}"
+email = "{{ $gitEmail }}"

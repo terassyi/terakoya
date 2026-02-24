@@ -1,0 +1,10 @@
+# Fish shell configuration — managed by chezmoi
+# Host: {{ .hostname }} | OS: {{ .os }} | GUI: {{ .gui }}
+
+set -gx LANG en_US.UTF-8
+
+{{ if .is_darwin -}}
+fish_add_path /opt/homebrew/bin
+{{ end -}}
+
+fish_add_path $HOME/.local/bin
