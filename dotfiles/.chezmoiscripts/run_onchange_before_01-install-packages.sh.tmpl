@@ -1,0 +1,45 @@
+#!/bin/bash
+set -euo pipefail
+
+# {{ include "dot_config/packages/ubuntu.txt" | sha256sum }}
+
+{{ if .is_linux -}}
+readarray -t PACKAGES <<'PKG_LIST'
+{{ include "dot_config/packages/ubuntu.txt" -}}
+PKG_LIST
+
+MISSING=()
+for pkg in "${PACKAGES[@]}"; do
+    [ -z "$pkg" ] && continue
+    if ! dpkg -s "$pkg" &>/dev/null; then
+        MISSING+=("$pkg")
+    fi
+done
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "Installing missing packages: ${MISSING[*]}"
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends "${MISSING[@]}"
+else
+    echo "All required packages already installed"
+fi
+
+if ! locale -a 2>/dev/null | grep -q "en_US.utf8"; then
+    sudo locale-gen en_US.UTF-8
+fi
+
+{{ else if .is_darwin -}}
+if ! command -v fish &>/dev/null; then
+    echo "Installing fish shell via official .pkg installer..."
+    FISH_VERSION="$(curl -fsSL https://api.github.com/repos/fish-shell/fish-shell/releases/latest | grep '"tag_name"' | sed 's/.*"tag_name": *"\(.*\)".*/\1/')"
+    FISH_PKG_URL="https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.pkg"
+    TMPDIR="$(mktemp -d)"
+    curl -fsSL -o "${TMPDIR}/fish.pkg" "$FISH_PKG_URL"
+    sudo installer -pkg "${TMPDIR}/fish.pkg" -target /
+    rm -rf "$TMPDIR"
+    echo "fish ${FISH_VERSION} installed"
+else
+    echo "fish already installed: $(fish --version)"
+fi
+
+{{ end -}}

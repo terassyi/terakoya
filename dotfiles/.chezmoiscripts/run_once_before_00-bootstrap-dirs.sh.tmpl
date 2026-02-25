@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+dirs=(
+    "${HOME}/workspace/github.com"
+    "${HOME}/.local/bin"
+    "${HOME}/.config"
+    "${HOME}/.cache"
+)
+
+for d in "${dirs[@]}"; do
+    if [ ! -d "$d" ]; then
+        mkdir -p "$d"
+        echo "Created: $d"
+    fi
+done

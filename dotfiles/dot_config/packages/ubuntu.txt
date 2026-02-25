@@ -1,0 +1,7 @@
+ca-certificates
+curl
+file
+fish
+git
+locales
+sudo

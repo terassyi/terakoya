@@ -1,0 +1,35 @@
+#!/bin/bash
+set -euo pipefail
+
+FISH_PATH="$(command -v fish 2>/dev/null || true)"
+
+if [ -z "$FISH_PATH" ]; then
+    echo "WARN: fish not found, skipping"
+    exit 0
+fi
+
+# Check current default shell
+{{ if .is_linux -}}
+CURRENT_SHELL="$(getent passwd "$(whoami)" | cut -d: -f7)"
+{{ else if .is_darwin -}}
+CURRENT_SHELL="$(dscl . -read /Users/"$(whoami)" UserShell 2>/dev/null | awk '{print $2}' || echo "")"
+{{ end -}}
+
+if [ "$CURRENT_SHELL" = "$FISH_PATH" ]; then
+    echo "fish is already the default shell"
+    exit 0
+fi
+
+echo "Setting fish ($FISH_PATH) as default shell..."
+
+if ! grep -qF "$FISH_PATH" /etc/shells; then
+    echo "$FISH_PATH" | sudo tee -a /etc/shells
+fi
+
+{{ if .is_linux -}}
+sudo chsh -s "$FISH_PATH" "$(whoami)"
+{{ else if .is_darwin -}}
+chsh -s "$FISH_PATH"
+{{ end -}}
+
+echo "Default shell changed to fish"

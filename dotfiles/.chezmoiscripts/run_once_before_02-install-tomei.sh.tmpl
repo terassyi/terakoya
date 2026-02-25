@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+if command -v tomei &>/dev/null; then
+    echo "tomei already installed: $(tomei version 2>/dev/null || echo 'unknown')"
+    exit 0
+fi
+
+echo "Installing tomei to ~/.local/bin/ ..."
+curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
+
+if command -v tomei &>/dev/null; then
+    echo "tomei installed: $(tomei version 2>/dev/null || echo 'done')"
+else
+    echo "ERROR: tomei installation failed"
+    exit 1
+fi

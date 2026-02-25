@@ -1,0 +1,72 @@
+[org/gnome/shell]
+disable-user-extensions=false
+enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'gTile@vibou', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'blur-my-shell@aunetx', 'pip-on-top@rafostar.github.com', 'space-bar@luchrioh', 'system-monitor@gnome-shell-extensions.gcampax.github.com']
+favorite-apps=['google-chrome.desktop', 'com.mitchellh.ghostty.desktop', 'code.desktop', 'discord.desktop', 'slack.desktop']
+
+[org/gnome/desktop/interface]
+overlay-scrolling=false
+color-scheme='prefer-dark'
+accent-color='teal'
+
+[org/gnome/desktop/background]
+color-shading-type='solid'
+picture-uri='file:///home/{{ .username }}/.local/share/backgrounds/interstellar.jpg'
+picture-uri-dark='file:///home/{{ .username }}/.local/share/backgrounds/interstellar.jpg'
+primary-color='#000000000000'
+secondary-color='#000000000000'
+
+[org/gnome/desktop/input-sources]
+current=uint32 0
+sources=[('xkb', 'us'), ('ibus', 'mozc-on')]
+
+[org/gnome/desktop/session]
+idle-delay=uint32 600
+
+[org/gnome/mutter]
+edge-tiling=true
+
+[org/gnome/shell/extensions/blur-my-shell]
+settings-version=2
+
+[org/gnome/shell/extensions/blur-my-shell/dash-to-dock]
+pipeline='pipeline_default_rounded'
+
+[org/gnome/shell/extensions/blur-my-shell/lockscreen]
+pipeline='pipeline_default'
+
+[org/gnome/shell/extensions/blur-my-shell/overview]
+pipeline='pipeline_default'
+
+[org/gnome/shell/extensions/blur-my-shell/panel]
+pipeline='pipeline_default'
+
+[org/gnome/shell/extensions/blur-my-shell/screenshot]
+pipeline='pipeline_default'
+
+[org/gnome/shell/extensions/space-bar/appearance]
+inactive-workspace-text-color='rgb(154,153,150)'
+workspace-margin=3
+workspace-bar-padding=3
+
+[org/gnome/shell/extensions/space-bar/behavior]
+scroll-wheel='panel'
+show-empty-workspaces=false
+smart-workspace-names=false
+toggle-overview=false
+
+[org/gnome/shell/extensions/dash-to-dock]
+dock-position='BOTTOM'
+extend-height=false
+animate-show-apps=false
+apply-custom-theme=false
+background-opacity=0.80000000000000004
+dash-max-icon-size=32
+hot-keys=false
+intellihide-mode='FOCUS_APPLICATION_WINDOWS'
+show-trash=false
+transparency-mode='DYNAMIC'
+
+[org/gnome/shell/extensions/gtile]
+grid-rows=3
+grid-cols=3
+show-icon-in-panel=true
