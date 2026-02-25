@@ -75,16 +75,6 @@ jobs:
       - name: Install chezmoi (native)
         if: matrix.mode == 'native'
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
-      - name: Install tomei (native)
+      - name: Run test (native)
         if: matrix.mode == 'native'
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: chezmoi diff (native, dry-run)
-        if: matrix.mode == 'native'
-        run: |
-          chezmoi init --source=${{ github.workspace }}/dotfiles --no-tty
-          chezmoi diff --source=${{ github.workspace }}/dotfiles --no-tty || true
-      - name: tomei validate (native)
-        if: matrix.mode == 'native'
-        run: tomei validate ${{ github.workspace }}/dotfiles/dot_config/tomei/
+        run: bash dotfiles/test.sh "${{ github.workspace }}/dotfiles"
