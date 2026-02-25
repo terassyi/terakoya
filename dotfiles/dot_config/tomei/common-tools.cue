@@ -9,5 +9,6 @@ cliTools: aqua.#AquaToolSet & {
 		fd:  {package: "sharkdp/fd", version: "v10.3.0"}
 		jq:  {package: "jqlang/jq", version: "1.8.1"}
 		bat: {package: "sharkdp/bat", version: "v0.26.1"}
+		sk:  {package: "skim-rs/skim", version: "v0.16.0"}
 	}
 }

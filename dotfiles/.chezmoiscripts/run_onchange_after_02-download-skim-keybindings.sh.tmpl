@@ -1,0 +1,20 @@
+#!/bin/bash
+set -euo pipefail
+
+# Re-run when skim version changes in tomei manifest:
+# {{ include "dot_config/tomei/common-tools.cue" | sha256sum }}
+
+DEST="${HOME}/.config/fish/functions/skim_key_bindings.fish"
+
+if ! command -v sk &>/dev/null; then
+    echo "sk not found, skipping skim key-bindings download"
+    exit 0
+fi
+
+VERSION=$(sk --version | awk '{print $2}')
+URL="https://raw.githubusercontent.com/skim-rs/skim/refs/tags/v${VERSION}/shell/key-bindings.fish"
+
+echo "Downloading skim key-bindings (v${VERSION})..."
+mkdir -p "$(dirname "$DEST")"
+curl -fsSL "$URL" -o "$DEST"
+echo "Installed: $DEST"
