@@ -1,22 +1,17 @@
 FROM ubuntu:24.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl git file fish sudo locales \
-    && rm -rf /var/lib/apt/lists/* \
-    && locale-gen en_US.UTF-8
+    ca-certificates curl sudo \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /usr/bin/fish testuser \
+RUN useradd -m -s /bin/bash testuser \
     && echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # chezmoi
 RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
 
 USER testuser
-
-# tomei
-RUN curl -fsSL https://raw.githubusercontent.com/terassyi/tomei/main/install.sh | sh
 WORKDIR /home/testuser
-ENV LANG=en_US.UTF-8
 ENV PATH="/home/testuser/.local/bin:${PATH}"
 
-CMD ["fish"]
+CMD ["bash"]

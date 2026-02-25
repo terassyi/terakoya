@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+# tomei manifest hashes (triggers re-run on change):
+# {{ include "dot_config/tomei/common-tools.cue" | sha256sum }}
+# {{ include "dot_config/tomei/tomei_platform.cue" | sha256sum }}
+
+TOMEI_DIR="${HOME}/.config/tomei"
+
+if ! command -v tomei &>/dev/null; then
+    echo "WARN: tomei not found, skipping"
+    exit 0
+fi
+
+if [ ! -d "$TOMEI_DIR" ]; then
+    echo "WARN: $TOMEI_DIR not found, skipping"
+    exit 0
+fi
+
+tomei init --yes
+tomei validate "$TOMEI_DIR"
+
+if [ "${CI:-}" = "true" ]; then
+    echo "CI: skipping tomei apply"
+else
+    tomei apply "$TOMEI_DIR"
+    echo "tomei apply completed"
+fi

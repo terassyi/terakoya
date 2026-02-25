@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+{{ if and .is_linux (not .headless) -}}
+if ! command -v dconf &>/dev/null; then
+    echo "dconf not found, skipping GNOME settings"
+    exit 0
+fi
+
+DCONF_FILE="${HOME}/.config/dconf/gnome.ini"
+
+if [ ! -f "$DCONF_FILE" ]; then
+    echo "WARN: $DCONF_FILE not found, skipping"
+    exit 0
+fi
+
+echo "Applying GNOME dconf settings from $DCONF_FILE ..."
+dconf load / < "$DCONF_FILE"
+echo "GNOME dconf settings applied"
+
+{{ else -}}
+echo "Skipping GNOME dconf settings (headless={{ .headless }}, os={{ .os }})"
+{{ end -}}

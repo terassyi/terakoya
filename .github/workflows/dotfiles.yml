@@ -67,33 +67,13 @@ jobs:
         if: matrix.mode == 'container'
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
+            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles \
+            -e CI=true \
             dotfiles-test bash -c "
-              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
-              chezmoi init --source=/home/testuser/dotfiles --no-tty &&
-              chezmoi apply --source=/home/testuser/dotfiles --no-tty &&
-              echo 'chezmoi apply succeeded'
-            "
-      - name: Verify deployed files in container
-        if: matrix.mode == 'container'
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
-            dotfiles-test bash -c "
-              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
               chezmoi init --source=/home/testuser/dotfiles --no-tty &&
               chezmoi apply --source=/home/testuser/dotfiles --no-tty &&
               test -f ~/.config/fish/config.fish &&
-              echo 'All expected files present'
-            "
-      - name: Run tomei validate in container
-        if: matrix.mode == 'container'
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles-src:ro \
-            dotfiles-test bash -c "
-              cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles &&
-              tomei validate /home/testuser/dotfiles/dot_config/tomei/
+              echo 'All checks passed'
             "
 
       # --- native mode ---

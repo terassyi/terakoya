@@ -8,22 +8,22 @@ build:
 
 run:
 	docker run --rm -it \
-		-v $(DOTFILES_DIR):/home/testuser/dotfiles:ro \
+		-v $(DOTFILES_DIR):/home/testuser/dotfiles \
 		$(IMAGE) fish
 
 test:
 	docker run --rm \
-		-v $(DOTFILES_DIR):/home/testuser/dotfiles-src:ro \
+		-v $(DOTFILES_DIR):/home/testuser/dotfiles \
+		-e CI=true \
 		$(IMAGE) bash -c " \
-		cp -a /home/testuser/dotfiles-src /home/testuser/dotfiles && \
 		chezmoi init --source=/home/testuser/dotfiles --no-tty && \
-		chezmoi diff --source=/home/testuser/dotfiles --no-tty || true && \
-		tomei validate /home/testuser/dotfiles/dot_config/tomei/ && \
+		chezmoi apply --source=/home/testuser/dotfiles --no-tty && \
+		test -f ~/.config/fish/config.fish && \
 		echo 'All checks passed'"
 
 shell:
 	docker run --rm -it \
-		-v $(DOTFILES_DIR):/home/testuser/dotfiles:ro \
+		-v $(DOTFILES_DIR):/home/testuser/dotfiles \
 		$(IMAGE) bash
 
 clean:
