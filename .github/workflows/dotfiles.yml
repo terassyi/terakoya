@@ -78,3 +78,5 @@ jobs:
       - name: Run test (native)
         if: matrix.mode == 'native'
         run: bash dotfiles/test.sh "${{ github.workspace }}/dotfiles"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
