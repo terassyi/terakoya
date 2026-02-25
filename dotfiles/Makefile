@@ -15,11 +15,7 @@ test:
 	docker run --rm \
 		-v $(DOTFILES_DIR):/home/testuser/dotfiles \
 		-e CI=true \
-		$(IMAGE) bash -c " \
-		chezmoi init --source=/home/testuser/dotfiles --no-tty && \
-		chezmoi apply --source=/home/testuser/dotfiles --no-tty && \
-		test -f ~/.config/fish/config.fish && \
-		echo 'All checks passed'"
+		$(IMAGE) bash /home/testuser/dotfiles/test.sh
 
 shell:
 	docker run --rm -it \

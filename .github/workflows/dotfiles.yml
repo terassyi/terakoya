@@ -63,18 +63,13 @@ jobs:
       - name: Build test image
         if: matrix.mode == 'container'
         run: docker build -t dotfiles-test dotfiles/
-      - name: Run chezmoi apply in container
+      - name: Run test in container
         if: matrix.mode == 'container'
         run: |
           docker run --rm \
             -v ${{ github.workspace }}/dotfiles:/home/testuser/dotfiles \
             -e CI=true \
-            dotfiles-test bash -c "
-              chezmoi init --source=/home/testuser/dotfiles --no-tty &&
-              chezmoi apply --source=/home/testuser/dotfiles --no-tty &&
-              test -f ~/.config/fish/config.fish &&
-              echo 'All checks passed'
-            "
+            dotfiles-test bash /home/testuser/dotfiles/test.sh
 
       # --- native mode ---
       - name: Install chezmoi (native)

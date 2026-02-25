@@ -1,10 +1,68 @@
-# Fish shell configuration — managed by chezmoi
+# Fish shell configuration -- managed by chezmoi
 # Host: {{ .hostname }} | OS: {{ .os }} | Headless: {{ .headless }}
 
+# ── Locale ─────────────────────────────────────────────
 set -gx LANG en_US.UTF-8
 
+# ── Environment variables ──────────────────────────────
+set -gx COLORTERM truecolor
+set -gx GOPATH $HOME/go
+set -gx GOROOT /usr/local/go
+set -gx GH_REPO_HOME $HOME/workspace/github.com
+
+# ── Skim defaults ──────────────────────────────────────
+set -gx SKIM_DEFAULT_COMMAND 'rg --files --hidden --follow --glob "!.git/*"'
+set -gx SKIM_DEFAULT_OPTIONS "--color=fg:#e6e6fa,fg+:#333333,bg+:#dda0dd,pointer:#ff0000,hl:#dda0dd,hl+:#dda0dd --height=30% --layout=reverse"
+
+# ── PATH ───────────────────────────────────────────────
 {{ if .is_darwin -}}
 fish_add_path /opt/homebrew/bin
 {{ end -}}
 
-fish_add_path $HOME/.local/bin
+# Tool paths managed by tomei
+if command -q tomei
+    eval (tomei env --shell fish)
+end
+
+if test -d /nix
+    fish_add_path /nix/var/nix/profiles/default/bin
+    fish_add_path $HOME/.nix-profile/bin
+end
+
+# ── Aliases ────────────────────────────────────────────
+alias .. 'cd ..'
+alias cl clear
+if command -q eza
+    alias ls eza
+    alias ll 'eza -lh'
+    alias la 'eza -alh'
+end
+
+# ── Abbreviations ──────────────────────────────────────
+abbr -a g git
+abbr -a ga 'git add'
+abbr -a gc 'git commit'
+abbr -a gd 'git diff'
+abbr -a gl 'git log'
+abbr -a gs 'git status'
+abbr -a gps 'git push'
+abbr -a gpl 'git pull'
+abbr -a gsw 'git switch'
+abbr -a k kubectl
+abbr -a zl zellij
+abbr -a zgh 'z ~/workspace/github.com'
+
+# ── Interactive shell setup ────────────────────────────
+if status is-interactive
+    set -gx TERM xterm-256color
+
+    if command -q sk
+        skim_key_bindings
+
+        bind \cr sk_history
+        bind \cf sk_bat
+        bind \cd sk_zoxide
+        bind \cu sk_zoxide_gh
+        bind \cv sk_code_repo
+    end
+end
