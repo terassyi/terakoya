@@ -1,0 +1,50 @@
+{{- /* ホスト情報の取得 */ -}}
+{{- $hostname := .chezmoi.hostname -}}
+{{- $os := .chezmoi.os -}}
+{{- $username := .chezmoi.username -}}
+
+{{- /* CI/テスト環境のオーバーライド (runner: GitHub Actions, testuser: コンテナテスト) */ -}}
+{{- if or (eq $username "runner") (eq $username "testuser") -}}
+  {{- $hostname = "dev" -}}
+{{- end -}}
+
+{{- /* デスクトップ環境の判定 */ -}}
+{{- $headless := true -}}
+{{- if eq $os "darwin" -}}
+  {{- $headless = false -}}
+{{- else if or (eq $hostname "teracarbon") (eq $hostname "teradev") -}}
+  {{- $headless = false -}}
+{{- else if eq $hostname "devvm" -}}
+  {{- $headless = false -}}
+{{- end -}}
+
+{{- /* ホスト別の git ユーザー設定 */ -}}
+{{- $gitName := $username -}}
+{{- $gitEmail := "iscale821@gmail.com" -}}
+{{- if eq $hostname "fukdesk" -}}
+  {{- $gitEmail = "tomoya-terashima@cybozu.co.jp" -}}
+{{- else if eq $hostname "dev" -}}
+  {{- $gitEmail = "dev@terassyi.net" -}}
+{{- end -}}
+
+[edit]
+command = "nvim"
+
+[diff]
+pager = "delta"
+
+[merge]
+command = "nvim"
+args = ["-d"]
+
+[data]
+hostname  = "{{ $hostname }}"
+username  = "{{ $username }}"
+os        = "{{ $os }}"
+headless  = {{ $headless }}
+is_darwin = {{ eq $os "darwin" }}
+is_linux  = {{ eq $os "linux" }}
+
+[data.git]
+name  = "{{ $gitName }}"
+email = "{{ $gitEmail }}"
