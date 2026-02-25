@@ -1,0 +1,32 @@
+[user]
+    name = {{ .git.name }}
+    email = {{ .git.email }}
+    signingkey = ~/.ssh/id_ed25519.pub
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgsign = true
+
+[gpg]
+    format = ssh
+
+[pull]
+    rebase = true
+
+[pager]
+    diff = delta
+    log = delta
+    reflog = delta
+    show = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    side-by-side = true
+
+[init]
+    defaultBranch = main
