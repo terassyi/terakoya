@@ -18,6 +18,7 @@ files=(
     ~/.config/fish/functions/sk_history.fish
     ~/.config/git/config
     ~/.config/zellij/config.kdl
+    ~/.config/ghostty/config
 )
 for f in "${files[@]}"; do
     test -f "$f" || { echo "FAIL: $f not found"; exit 1; }
@@ -58,5 +59,8 @@ echo "==> Zellij config check"
 grep -q 'theme "tokyo-night"' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - theme"; exit 1; }
 grep -q 'default_shell "fish"' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - default_shell"; exit 1; }
 grep -q 'pane_frames false' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - pane_frames"; exit 1; }
+
+echo "==> Ghostty config check"
+grep -q 'initial-command = zellij' ~/.config/ghostty/config || { echo "FAIL: ghostty config - initial-command"; exit 1; }
 
 echo "All checks passed"
