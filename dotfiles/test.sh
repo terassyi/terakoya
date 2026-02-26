@@ -17,6 +17,7 @@ files=(
     ~/.config/fish/functions/clone.fish
     ~/.config/fish/functions/sk_history.fish
     ~/.config/git/config
+    ~/.config/zellij/config.kdl
 )
 for f in "${files[@]}"; do
     test -f "$f" || { echo "FAIL: $f not found"; exit 1; }
@@ -52,5 +53,10 @@ assert_git "pull.rebase" "rebase = true"
 assert_git "pager.diff" "diff = delta"
 assert_git "delta.navigate" "navigate = true"
 assert_git "init.defaultBranch" "defaultBranch = main"
+
+echo "==> Zellij config check"
+grep -q 'theme "tokyo-night"' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - theme"; exit 1; }
+grep -q 'default_shell "fish"' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - default_shell"; exit 1; }
+grep -q 'pane_frames false' ~/.config/zellij/config.kdl || { echo "FAIL: zellij config - pane_frames"; exit 1; }
 
 echo "All checks passed"
