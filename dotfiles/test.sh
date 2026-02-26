@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-DOTFILES_SOURCE="/home/testuser/dotfiles"
+DOTFILES_SOURCE="${1:-/home/testuser/dotfiles}"
 
 echo "==> chezmoi init"
 chezmoi init --source="$DOTFILES_SOURCE" --no-tty

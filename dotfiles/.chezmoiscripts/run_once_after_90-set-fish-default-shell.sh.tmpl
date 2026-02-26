@@ -29,7 +29,7 @@ fi
 {{ if .is_linux -}}
 sudo chsh -s "$FISH_PATH" "$(whoami)"
 {{ else if .is_darwin -}}
-chsh -s "$FISH_PATH"
+sudo chsh -s "$FISH_PATH" "$(whoami)"
 {{ end -}}
 
 echo "Default shell changed to fish"
