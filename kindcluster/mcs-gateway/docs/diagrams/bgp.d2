@@ -1,0 +1,42 @@
+# BGP のセッションと広報する経路
+direction: down
+
+classes: {
+  as: {style: {fill: "#FFF4E5"; stroke: "#E8A33D"; border-radius: 8}}
+  cilium: {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"; border-radius: 8}}
+  pfx: {shape: page; style: {fill: "#E9F7EF"; stroke: "#3BA36B"; font-size: 12}}
+}
+
+spine0: "spine0 / AS65000\n全クラスタの経路を集約" {class: as}
+
+tor-edge: "tor-edge / AS65100\nbgp listen range 10.69.0.0/24\nmaximum-paths 8" {class: as}
+tor-core1: "tor-core1 / AS65200\nbgp listen range 10.69.1.0/24" {class: as}
+tor-core2: "tor-core2 / AS65300\nbgp listen range 10.69.2.0/24" {class: as}
+
+c-edge: "Cilium x3 (edge)\nAS65101" {class: cilium}
+c-core1: "Cilium x3 (core1)\nAS65201" {class: cilium}
+c-core2: "Cilium x3 (core2)\nAS65301" {class: cilium}
+
+p-edge: "PodIPPool blocks 10.100.x.0/24\nLB VIP 10.80.0.x/32" {class: pfx}
+p-core1: "PodIPPool blocks 10.101.x.0/24\nLB VIP 10.81.0.x/32" {class: pfx}
+p-core2: "PodIPPool blocks 10.102.x.0/24\nLB VIP 10.82.0.x/32" {class: pfx}
+
+c-edge -> tor-edge: "eBGP 広報"
+c-core1 -> tor-core1: "eBGP 広報"
+c-core2 -> tor-core2: "eBGP 広報"
+
+tor-edge <-> spine0: eBGP
+tor-core1 <-> spine0: eBGP
+tor-core2 <-> spine0: eBGP
+
+c-edge -- p-edge {style.stroke-dash: 3}
+c-core1 -- p-core1 {style.stroke-dash: 3}
+c-core2 -- p-core2 {style.stroke-dash: 3}
+
+note: |md
+  - Cilium は経路を **広報するだけ**。受信した経路はカーネルに入れない
+  - 他クラスタ宛ては node0 の default 経路で ToR に渡す
+  - 同一クラスタ内は autoDirectNodeRoutes (同一 L2)
+| {
+  shape: text
+}

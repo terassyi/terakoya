@@ -1,0 +1,48 @@
+# MCS: core の ServiceExport を edge へ同期する
+direction: right
+
+classes: {
+  res: {shape: page; style: {fill: "#E9F7EF"; stroke: "#3BA36B"; font-size: 13}}
+  gen: {shape: page; style: {fill: "#FDF2F8"; stroke: "#DB2777"; font-size: 13}}
+  cluster: {style: {fill: "#FAFAFA"; stroke: "#9AA3AF"; stroke-dash: 3; border-radius: 10}}
+}
+
+core1: "core1" {
+  class: cluster
+  svc: "Service demo/echo" {class: res}
+  eps: "EndpointSlice\n(echo Pod IPs)" {class: res}
+  exp: "ServiceExport demo/echo" {class: res}
+}
+
+core2: "core2" {
+  class: cluster
+  svc: "Service demo/echo" {class: res}
+  eps: "EndpointSlice\n(echo Pod IPs)" {class: res}
+  exp: "ServiceExport demo/echo" {class: res}
+}
+
+sync: "mcs/sync.sh\n(task sync-mcs, host で実行)" {
+  shape: parallelogram
+  style: {fill: "#FFF4E5"; stroke: "#E8A33D"}
+}
+
+edge: "edge" {
+  class: cluster
+  imp: "ServiceImport demo/echo\ntype: ClusterSetIP" {class: gen}
+  s1: "EndpointSlice echo-core1\nservice-name=echo\nsource-cluster=core1" {class: gen}
+  s2: "EndpointSlice echo-core2\nservice-name=echo\nsource-cluster=core2" {class: gen}
+  dns: "CoreDNS\necho.demo.svc.clusterset.local" {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"}}
+  eg: "Envoy Gateway\nHTTPRoute backendRef" {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"}}
+  dns -> imp: watch {style.stroke-dash: 3}
+  eg -> imp: backendRef {style.stroke-dash: 3}
+  eg -> s1: endpoints {style.stroke-dash: 3}
+  eg -> s2: endpoints {style.stroke-dash: 3}
+}
+
+core1.exp -> sync: read
+core1.eps -> sync: read
+core2.exp -> sync: read
+core2.eps -> sync: read
+sync -> edge.imp: "apply (SSA)"
+sync -> edge.s1: "apply (SSA)"
+sync -> edge.s2: "apply (SSA)"

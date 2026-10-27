@@ -1,0 +1,36 @@
+# 1 PR の中の開発プロセス
+direction: right
+
+classes: {
+  step: {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"; border-radius: 8; font-size: 15}}
+  gate: {shape: diamond; style: {fill: "#FFF4E5"; stroke: "#E8A33D"}}
+  stop: {shape: oval; style: {fill: "#FDF2F8"; stroke: "#DB2777"; font-size: 12}}
+}
+
+s1: "Step 1\nドキュメント\n(設計 + テスト仕様)\nstatus: Draft" {class: step}
+review: "レビュー\n合意?" {class: gate}
+s2: "Step 2\n実装" {class: step}
+s3: "Step 3\nテスト記述\n再現性確認\nstatus: Implemented" {class: step}
+pr: "PR" {shape: rectangle; style: {fill: "#E9F7EF"; stroke: "#3BA36B"}}
+
+ai1: "AI は停止して報告" {class: stop}
+ai2: "AI は停止して報告" {class: stop}
+
+s1 -> review
+review -> s2: "Yes (status: Reviewed)"
+review -> s1: "No: 指摘を反映" {style.stroke-dash: 3}
+s2 -> s1: "設計と違うやり方が必要\n(Draft に戻す)" {style.stroke-dash: 3}
+s2 -> s3
+s3 -> pr: "人の指示でコミット / PR"
+
+s1 -- ai1 {style.stroke-dash: 2}
+s3 -- ai2 {style.stroke-dash: 2}
+
+repro: |md
+  **再現性確認**
+  1. `task stop`
+  2. `task start` → `task test`
+  3. `task start` → `task test` (冪等性)
+  4. `task stop` (残骸なし)
+| {shape: text}
+s3 -- repro {style.stroke-dash: 2}

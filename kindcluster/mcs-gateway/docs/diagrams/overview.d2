@@ -1,0 +1,71 @@
+# 全体構成: ファブリック、3 クラスタ、主要コンポーネント
+direction: down
+
+classes: {
+  router: {
+    shape: hexagon
+    style: {fill: "#FFF4E5"; stroke: "#E8A33D"}
+  }
+  node: {
+    style: {fill: "#EEF4FF"; stroke: "#5B8DEF"}
+  }
+  app: {
+    style: {fill: "#E9F7EF"; stroke: "#3BA36B"; border-radius: 6}
+  }
+  cluster: {
+    style: {fill: "#FAFAFA"; stroke: "#9AA3AF"; stroke-dash: 3; border-radius: 10}
+  }
+}
+
+host: "host\nto-mcsgw 172.30.0.1/30" {
+  shape: rectangle
+  style: {fill: "#F3F4F6"; stroke: "#6B7280"}
+  client: "curl / E2E" {shape: oval}
+}
+
+internet: Internet {shape: cloud}
+
+spine0: "spine0\nAS65000" {class: router}
+
+tor-edge: "tor-edge\nAS65100\nbr0 10.69.0.1/24" {class: router}
+tor-core1: "tor-core1\nAS65200\nbr0 10.69.1.1/24" {class: router}
+tor-core2: "tor-core2\nAS65300\nbr0 10.69.2.1/24" {class: router}
+
+edge: "edge cluster (Cilium AS65101)" {
+  class: cluster
+  nodes: "control-plane / worker / worker2\n10.69.0.11-13" {class: node}
+  envoy: "Envoy Gateway\nVIP 10.80.0.0/24" {class: app}
+  import: "ServiceImport demo/echo\n+ EndpointSlice x2" {class: app}
+  envoy -> import: backendRef {style.stroke-dash: 3}
+}
+
+core1: "core1 cluster (Cilium AS65201)" {
+  class: cluster
+  nodes: "control-plane / worker / worker2\n10.69.1.11-13" {class: node}
+  echo: "demo/echo\n+ ServiceExport" {class: app}
+}
+
+core2: "core2 cluster (Cilium AS65301)" {
+  class: cluster
+  nodes: "control-plane / worker / worker2\n10.69.2.11-13" {class: node}
+  echo: "demo/echo\n+ ServiceExport" {class: app}
+}
+
+host <-> spine0: "veth host0"
+spine0 -> internet: "eth0 MASQUERADE" {style.stroke-dash: 3}
+
+spine0 <-> tor-edge: "eBGP 10.255.0.0/31"
+spine0 <-> tor-core1: "eBGP 10.255.0.2/31"
+spine0 <-> tor-core2: "eBGP 10.255.0.4/31"
+
+tor-edge <-> edge.nodes: "eBGP (node0)"
+tor-core1 <-> core1.nodes: "eBGP (node0)"
+tor-core2 <-> core2.nodes: "eBGP (node0)"
+
+sync: "task sync-mcs\n(mcs/sync.sh)" {
+  shape: parallelogram
+  style: {fill: "#FDF2F8"; stroke: "#DB2777"}
+}
+core1.echo -> sync: export {style.stroke: "#DB2777"}
+core2.echo -> sync: export {style.stroke: "#DB2777"}
+sync -> edge.import: import {style.stroke: "#DB2777"}
