@@ -1,0 +1,16 @@
+# DSR (Geneve dispatch) + Maglev のパケットの流れ
+shape: sequence_diagram
+
+client: "host\n(client)"
+tor: "tor-edge\n(ECMP)"
+rx: "edge-worker\n受信ノード"
+be: "edge-worker2\nバックエンドノード"
+pod: "Envoy Pod"
+
+client -> tor: "SYN  dst = VIP:80"
+tor -> rx: "ECMP で選択"
+rx -> rx: "Maglev: 5-tuple → backend"
+rx -> be: "Geneve (UDP 6081)\nオプションに VIP:port"
+be -> pod: "デカプセル化 → Pod へ"
+pod -> be: "SYN-ACK"
+be -> client: "src = VIP:80 に書き換えて直接返す\n(受信ノードを経由しない)" {style.stroke: "#3BA36B"}
