@@ -156,9 +156,9 @@ kindcluster/mcs-gateway/
 - ソースと生成物の両方をコミットする。GitHub 上で生成物をそのまま表示するため。
 - 生成は `task docs` で行う。中身は次のコマンドで、全図で同じオプションを使う。
   ```sh
-  d2 --layout elk --theme 0 --dark-theme 200 --pad 24 docs/diagrams/<name>.d2 docs/images/<name>.svg
+  d2 --layout elk --theme 0 --pad 24 docs/diagrams/<name>.d2 docs/images/<name>.svg
   ```
-  `--dark-theme` を付けるので、GitHub のダークモードでも読める。
+  `--dark-theme` は付けない。図は固定の淡い塗り色（`style.fill`）を使う。ダークテーマにすると文字色だけが明るくなり、塗り色はそのままなのでコントラストが足りなくなる。SVG は白背景のライトテーマに固定し、GitHub のダークモードでも白いカードとして表示させる。
 - d2 はマシン全体で使うツールとして、yatate（tomei の `cliTools`）で管理する。バージョンは [operations.md](operations.md) 2 章の表に従う。ラボの aqua.yaml には入れない。
   - CI（GitHub Actions）には yatate がないので、ワークフローで d2 の公式リリースを同じバージョンで取得する。yatate のバージョンを上げたら、ワークフローのバージョンと SVG もあわせて更新する。
 - 図を変えたら、ソースと SVG を同じコミットに入れる。CI は `task docs` を再実行し、生成物に差分がないことを確かめる（[testing.md](testing.md) 4 章）。

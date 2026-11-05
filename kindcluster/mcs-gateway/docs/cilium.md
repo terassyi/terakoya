@@ -32,6 +32,8 @@ autoDirectNodeRoutes: true
 ipv4NativeRoutingCIDR: 10.0.0.0/8   # クラスタ間の Pod 通信を SNAT しない
 ipam:
   mode: multi-pool
+bpf:
+  masquerade: true                  # multi-pool では iptables masquerade に egressMasqueradeInterfaces が必要になるため eBPF を使う [C-4]
 devices: node+
 nodePort:
   enabled: true
@@ -239,14 +241,14 @@ Taskfile のタスク:
 | dsr-02 | Geneve での転送 | 受信ノードの `node0` を tcpdump | バックエンドノード宛ての Geneve（UDP 6081）が観測される |
 | dsr-03 | 応答の直接返送 | 受信ノードの `node0` を tcpdump | VIP からクライアントへの応答が受信ノードを通らない |
 | dsr-04 | Maglev の一貫性 | 送信元ポートを固定し、受信ノードを変えて同じ 5-tuple で接続する | 同じバックエンドが選ばれる |
-| dsr-05 | MTU | 大きなペイロード（例: 1 MB）の HTTP を VIP 経由で取得する | 欠落なく取得できる |
+| dsr-05 | MTU（Geneve で運ばれる方向） | バックエンドが受信ノードと別のノードにだけいる状態で、host から VIP へ大きなリクエストボディ（例: 1 MB の POST。MSS いっぱいのセグメントになる）を送る。受信ノードの `node0` を tcpdump し、`cilium-dbg monitor --type drop` を見る | 全体が届いて 200 が返る。MSS いっぱいのセグメントも Geneve で転送され、ICMP frag-needed も drop も出ない |
 
 ---
 
 ## 8. 未確定事項
 
 - **MTU:** Geneve のカプセル化で増える分（50 byte 程度）を見込む必要がある。`node0` とファブリックの MTU を上げるか、Pod の MTU を下げるかを決める。
-- **multi-pool の制約:** native routing、BPF masquerade、KPR、DSR との組み合わせの制約を、固定したバージョンのドキュメントで確認する [C-4][C-5]。
+- **multi-pool の制約:** masquerade は確認済み（iptables なら `egressMasqueradeInterfaces` が必要なので、`bpf.masquerade: true` にした [C-4]）。KPR、DSR との組み合わせの制約は、固定したバージョンのドキュメントで確認する [C-4][C-5]。
 - **LB IPAM の既定:** 固定したバージョンで LB IPAM が既定で有効かを確認する [C-13]。
 
 ---
