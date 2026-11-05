@@ -1,0 +1,22 @@
+# host から core の Pod までのリクエストの流れ
+shape: sequence_diagram
+
+host: "host\n(curl)"
+spine0: spine0
+tor-edge: tor-edge
+rx: "edge 受信ノード\n(Cilium)"
+envoy: "Envoy Pod\n(edge)"
+tor-core: "tor-core1/2"
+echo: "echo Pod\n(core1/core2)"
+
+host -> spine0: "dst = Gateway VIP"
+spine0 -> tor-edge: "VIP の経路 (BGP)"
+tor-edge -> rx: "ECMP でノードを選ぶ"
+rx -> envoy: "Maglev で選択 → Geneve (DSR)"
+envoy -> envoy: "HTTPRoute → ServiceImport\nEndpointSlice から core Pod IP を選ぶ"
+envoy -> tor-edge: "dst = core Pod IP (node0 の default 経路)"
+tor-edge -> spine0
+spine0 -> tor-core: "PodIPPool ブロックの経路 (BGP)"
+tor-core -> echo
+echo -> envoy: "応答 (同じ経路を逆向き)"
+envoy -> host: "応答 src = VIP (DSR: 受信ノードを経由しない)" {style.stroke-dash: 3}

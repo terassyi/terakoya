@@ -1,0 +1,64 @@
+# containerlab トポロジ (lab: mcsgw) のリンクとインターフェース
+direction: down
+
+classes: {
+  router: {style: {fill: "#FFF4E5"; stroke: "#E8A33D"}}
+  node: {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"}}
+  sidecar: {style: {fill: "#F5F3FF"; stroke: "#8B5CF6"; font-size: 12}}
+  bridge: {shape: rectangle; style: {fill: "#FEF9C3"; stroke: "#CA8A04"; font-size: 12}}
+}
+
+host: "host netns" {
+  style: {fill: "#F3F4F6"; stroke: "#6B7280"}
+  to-mcsgw: "to-mcsgw\n172.30.0.1/30"
+}
+
+spine0: "clab-mcsgw-spine0 (FRR)" {
+  class: router
+  host0: "host0\n172.30.0.2"
+  if-edge: "tor-edge\n10.255.0.0"
+  if-core1: "tor-core1\n10.255.0.2"
+  if-core2: "tor-core2\n10.255.0.4"
+  eth0: "eth0 (docker)"
+}
+
+tor-edge: "clab-mcsgw-tor-edge (FRR)" {
+  class: router
+  uplink: "uplink\n10.255.0.1"
+  br0: "br0 10.69.0.1/24" {class: bridge}
+  n0
+  n1
+  n2
+  n0 -> br0: master {style.stroke-dash: 3}
+  n1 -> br0: master {style.stroke-dash: 3}
+  n2 -> br0: master {style.stroke-dash: 3}
+}
+
+tor-core1: "clab-mcsgw-tor-core1 (FRR)\nbr0 10.69.1.1/24 / uplink 10.255.0.3" {class: router}
+tor-core2: "clab-mcsgw-tor-core2 (FRR)\nbr0 10.69.2.1/24 / uplink 10.255.0.5" {class: router}
+
+edge: "kind cluster: edge" {
+  style: {fill: "#FAFAFA"; stroke: "#9AA3AF"; stroke-dash: 3}
+  cp: "edge-control-plane\nnode0 10.69.0.11" {class: node}
+  w: "edge-worker\nnode0 10.69.0.12" {class: node}
+  w2: "edge-worker2\nnode0 10.69.0.13" {class: node}
+}
+
+core1: "kind cluster: core1\n(10.69.1.11-13, 構成は edge と同じ)" {
+  style: {fill: "#FAFAFA"; stroke: "#9AA3AF"; stroke-dash: 3}
+}
+core2: "kind cluster: core2\n(10.69.2.11-13, 構成は edge と同じ)" {
+  style: {fill: "#FAFAFA"; stroke: "#9AA3AF"; stroke-dash: 3}
+}
+
+host.to-mcsgw <-> spine0.host0
+spine0.if-edge <-> tor-edge.uplink
+spine0.if-core1 <-> tor-core1
+spine0.if-core2 <-> tor-core2
+
+tor-edge.n0 <-> edge.cp: "sc-edge-control-plane"
+tor-edge.n1 <-> edge.w: "sc-edge-worker"
+tor-edge.n2 <-> edge.w2: "sc-edge-worker2"
+
+tor-core1 <-> core1: "n0-n2 ↔ node0 x3"
+tor-core2 <-> core2: "n0-n2 ↔ node0 x3"

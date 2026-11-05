@@ -1,0 +1,21 @@
+# stacked PR の積み上げとテストラベル
+direction: right
+
+classes: {
+  pr: {style: {fill: "#EEF4FF"; stroke: "#5B8DEF"; border-radius: 6; font-size: 13}}
+  base: {style: {fill: "#F3F4F6"; stroke: "#6B7280"; border-radius: 6}}
+}
+
+main: main {class: base}
+p00: "00-design\ndocs 一式" {class: pr}
+p01: "01-skeleton\naqua / Taskfile / e2e / CI" {class: pr}
+p02: "02-fabric\nfabric" {class: pr}
+p03: "03-cilium\ncilium" {class: pr}
+p04: "04-bgp\nbgp" {class: pr}
+p05: "05-dsr\ndsr" {class: pr}
+p06: "06-envoy-gateway\ngateway" {class: pr}
+p07: "07-mcs\nmcs" {class: pr}
+p08: "08-multicluster-gateway\nmulticluster-gateway" {class: pr}
+p09: "09-ci-e2e\nall labels on CI" {class: pr}
+
+main -> p00 -> p01 -> p02 -> p03 -> p04 -> p05 -> p06 -> p07 -> p08 -> p09

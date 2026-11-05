@@ -1,0 +1,43 @@
+# kind ノード 1 台の netns と sidecar の関係
+direction: right
+
+docker-kind: "docker network: kind" {
+  shape: cloud
+  style: {fill: "#F3F4F6"; stroke: "#6B7280"}
+}
+
+tor: "tor-edge\nbr0 10.69.0.1" {
+  style: {fill: "#FFF4E5"; stroke: "#E8A33D"}
+}
+
+netns: "netns of edge-worker" {
+  style: {fill: "#EEF4FF"; stroke: "#5B8DEF"; border-radius: 8}
+
+  kind: "container: edge-worker (kind node)" {
+    style: {fill: "#FFFFFF"; stroke: "#5B8DEF"}
+    kubelet: "kubelet\nnode-ip 10.69.0.12"
+    cilium: "cilium-agent\nBGP / eBPF LB"
+  }
+
+  sidecar: "container: sc-edge-worker\nnetwork-mode: container:edge-worker" {
+    style: {fill: "#F5F3FF"; stroke: "#8B5CF6"}
+    exec: |md
+      ```sh
+      ip addr add 10.69.0.12/24 dev node0
+      ip route replace default via 10.69.0.1 dev node0
+      ```
+    |
+  }
+
+  eth0: "eth0 (172.18.x.x)" {shape: circle; style.font-size: 12}
+  node0: "node0 (10.69.0.12/24)" {shape: circle; style.font-size: 12}
+  route: |md
+    **routing table**
+    - default via 10.69.0.1 dev node0
+    - 172.18.0.0/16 dev eth0
+  |
+}
+
+netns.eth0 <-> docker-kind: "API server 名前解決 / image pull"
+netns.node0 <-> tor: "clab link\n(Pod / Node / VIP の全トラフィック)"
+netns.sidecar -> netns.node0: "設定" {style.stroke-dash: 3}
