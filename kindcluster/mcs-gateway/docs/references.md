@@ -3,7 +3,7 @@
 mcs-gateway の設計と実装で参照する文献の一覧。
 
 - 各コンポーネントのドキュメントからは、ここの ID（例: `[C-4]`）で参照する。読んで確かめたことは、参照する側のドキュメントの本文に書く。
-- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8、T-9 は 2026-11-06 に追加・確認）。
+- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-10 は 2026-11-06 に追加・確認）。
 - docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.20/`）。
 - 新しく文献を見つけたら、該当するカテゴリに追記する。
 
@@ -148,3 +148,4 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | T-7 | [D2](https://d2lang.com/) | 00〜 | ドキュメントの図の記述言語（レイアウトエンジン、テーマ、sequence diagram） |
 | T-8 | [lychee](https://github.com/lycheeverse/lychee) | 01 | `task lint` のリンクチェック。`--offline` でローカルのリンクだけを見る |
 | T-9 | [yamllint](https://yamllint.readthedocs.io/) | 01 | `task lint` の YAML 検査。`extends: default` と規則の無効化 |
+| T-10 | [pinact](https://github.com/suzuki-shunsuke/pinact) | 01 | action を commit SHA に固定する。`--fix=false --no-api` によるオフラインの検査 |

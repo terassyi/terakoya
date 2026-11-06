@@ -61,6 +61,7 @@ kind v0.33.0 の既定のイメージは v1.37.0 なので、kind の設定で�
 | cilium-cli | v0.20.2 | aqua | |
 | kubeconform | v0.8.0 | aqua | |
 | lychee | v0.24.2 | aqua | markdown のリンクチェック |
+| pinact | v5.0.2 | aqua | CI の action を SHA に固定し、`task lint` で固定を検査する |
 | uv | 0.13.7 | aqua | yamllint を `uvx` で動かすためだけに使う |
 | yamllint | 1.38.0 | Taskfile vars（`uvx yamllint@<ver>`） | aqua-registry にないため |
 | Go | 1.26 | `e2e/go.mod`（`go` と `toolchain`） | CI は `actions/setup-go` の `go-version-file` で同じ版を使う |

@@ -131,6 +131,7 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | 検査 | 対象 | コマンド | 追加する PR |
 |---|---|---|---|
 | yamllint | ラボ内のすべての YAML（`Taskfile.yaml`、`aqua.yaml` を含む） | `uvx yamllint@<ver> -s .`（設定は `.yamllint.yaml`） [T-9] | 01 |
+| action の SHA 固定 | `.github/workflows/kindcluster-mcs-gateway.yml` | `pinact run --fix=false --no-api <workflow>`。すべての `uses:` が 40 文字の SHA とバージョンのコメントで固定されていること。GitHub API を呼ばないので、CI でトークンが要らない [T-10] | 01 |
 | gofmt | `e2e/` | `gofmt -l e2e` の出力が空 | 01 |
 | go vet | `e2e/` | `e2e/` で `go vet ./...` | 01 |
 | テストの列挙 | `e2e/` | `e2e/` で `MCSGW_E2E=1 go test -list '.*' ./...`。テストがコンパイルでき、列挙できること | 01 |
@@ -168,7 +169,7 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 4. d2 v0.9.0 を公式リリースから取得する。チェックサムを検証し、`PATH` に置く。
 5. `task lint`
 
-action はリポジトリの既存のワークフローと同じく、メジャーバージョンのタグで指定する（例: `actions/checkout@v6`）。
+action は pinact で commit SHA に固定し、バージョンをコメントで残す（例: `actions/checkout@<sha> # v6.1.0`）。タグは付け替えられるので、タグの指定ではサプライチェーン攻撃を防げないため。Dependabot（github-actions）はこの形式のまま、SHA とコメントを一緒に更新する。固定を外すと `task lint` が失敗する。
 
 ---
 
@@ -188,4 +189,4 @@ action はリポジトリの既存のワークフローと同じく、メジャ�
 
 ## 7. 参考文献
 
-[I-11] [T-3]〜[T-5] [T-8] [T-9] [F-2]（[references.md](references.md)）
+[I-11] [T-3]〜[T-5] [T-8]〜[T-10] [F-2]（[references.md](references.md)）
