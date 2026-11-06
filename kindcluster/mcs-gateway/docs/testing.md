@@ -131,6 +131,8 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | 検査 | 対象 | コマンド | 追加する PR |
 |---|---|---|---|
 | yamllint | ラボ内のすべての YAML（`Taskfile.yaml`、`aqua.yaml` を含む） | `uvx yamllint@<ver> -s .`（設定は `.yamllint.yaml`） [T-9] | 01 |
+| ツールの対応表 | `aqua.yaml` と Taskfile の `AQUA_COMMANDS` | aqua.yaml のパッケージと `AQUA_COMMANDS` のキーが過不足なく一致すること。`check-host` が見るコマンドの一覧が、aqua.yaml とずれないようにするため | 01 |
+| ワークフロー | `.github/workflows/kindcluster-mcs-gateway.yml` | `actionlint <workflow>`。`run:` の中は shellcheck でも検査する [T-11] | 01 |
 | action の SHA 固定 | `.github/workflows/kindcluster-mcs-gateway.yml` | `pinact run --fix=false --no-api <workflow>`。すべての `uses:` が 40 文字の SHA とバージョンのコメントで固定されていること。GitHub API を呼ばないので、CI でトークンが要らない [T-10] | 01 |
 | gofmt | `e2e/` | `gofmt -l e2e` の出力が空 | 01 |
 | go vet | `e2e/` | `e2e/` で `go vet ./...` | 01 |
@@ -160,6 +162,8 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | runner | `ubuntu-24.04` |
 | 作業ディレクトリ | `kindcluster/mcs-gateway` |
 | ジョブ | `lint` の 1 つ |
+| `permissions` | `contents: read` だけにする。リポジトリの既定ではトークンが write 権限を持つが、`lint` は読むだけなので絞る |
+| checkout | `persist-credentials: false`。トークンを `.git/config` に残さず、後のステップ（aqua で入れたツールや `uvx` で取得した yamllint）から読めないようにする |
 
 `lint` ジョブのステップ:
 
@@ -188,4 +192,4 @@ action は pinact で commit SHA に固定し、バージョンをコメント�
 
 ## 7. 参考文献
 
-[I-11] [T-3]〜[T-5] [T-8]〜[T-10] [F-2]（[references.md](references.md)）
+[I-11] [T-3]〜[T-5] [T-8]〜[T-11] [F-2]（[references.md](references.md)）

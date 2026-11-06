@@ -16,7 +16,7 @@
 | 5 | sysctl | `fs.inotify.max_user_instances >= 512`、`fs.inotify.max_user_watches >= 524288` [K-2] | `sysctl -n` | 失敗 |
 | 6 | カーネル | 5.10 以上（Cilium の要件 [C-16]） | `uname -r` | 失敗 |
 | 7 | 権限 | `sudo` を使える（containerlab と host の netns 操作に必要） | `command -v sudo`。`check-host` 自身は sudo を実行しない | 失敗 |
-| 8 | ツール | aqua で入れたツールに PATH が通っている | `aqua.yaml` の各ツールについて `command -v` | 失敗（`task setup` を案内する） |
+| 8 | ツール | host のコマンド（docker、curl、go）と、aqua で入れたツールに PATH が通っている | Taskfile の `HOST_COMMANDS` と `AQUA_COMMANDS` の各コマンドについて `command -v`。`AQUA_COMMANDS` は aqua.yaml のパッケージからコマンドへの対応表で、`task lint`（`lint:tools`）が aqua.yaml との過不足を検査する | 失敗（`task setup` を案内する） |
 
 - 失敗した項目があれば、その項目と直し方をすべて表示してから失敗する。最初の 1 件で止まらない。
 - 警告の項目は表示だけして、成功として扱う。
@@ -62,6 +62,8 @@ kind v0.33.0 の既定のイメージは v1.37.0 なので、kind の設定で�
 | kubeconform | v0.8.0 | aqua | |
 | lychee | v0.24.2 | aqua | markdown のリンクチェック |
 | pinact | v5.0.2 | aqua | CI の action を SHA に固定し、`task lint` で固定を検査する |
+| actionlint | v1.7.12 | aqua | CI のワークフローの検査 |
+| shellcheck | v0.11.0 | aqua | actionlint がワークフローの `run:` を検査するのに使う。版を固定して、手元と CI で結果をそろえる |
 | uv | 0.13.7 | aqua | yamllint を `uvx` で動かすためだけに使う |
 | yamllint | 1.38.0 | Taskfile vars（`uvx yamllint@<ver>`） | aqua-registry にないため |
 | Go | 1.26 | `e2e/go.mod`（`go` と `toolchain`） | CI は `actions/setup-go` の `go-version-file` で同じ版を使う |

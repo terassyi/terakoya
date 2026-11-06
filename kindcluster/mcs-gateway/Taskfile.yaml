@@ -6,7 +6,27 @@ vars:
   YAMLLINT_VERSION: 1.38.0
   D2_FLAGS: --layout elk --theme 0 --pad 24
   # Commands that must be on PATH (docs/operations.md 1, item 8).
-  REQUIRED_COMMANDS: docker curl go d2 kind containerlab kubectl helm kustomize task yq jq cilium kubeconform lychee uv uvx
+  # HOST_COMMANDS come from the host. AQUA_COMMANDS maps every package in
+  # aqua.yaml to its commands; `task lint:tools` keeps the keys in sync.
+  HOST_COMMANDS: docker curl go
+  AQUA_COMMANDS:
+    map:
+      kubernetes-sigs/kind: kind
+      srl-labs/containerlab: containerlab
+      kubernetes/kubectl: kubectl
+      helm/helm: helm
+      kubernetes-sigs/kustomize: kustomize
+      go-task/task: task
+      mikefarah/yq: yq
+      jqlang/jq: jq
+      cilium/cilium-cli: cilium
+      yannh/kubeconform: kubeconform
+      lycheeverse/lychee: lychee
+      astral-sh/uv: uv uvx
+      suzuki-shunsuke/pinact: pinact
+      d2lang/d2: d2
+      rhysd/actionlint: actionlint
+      koalaman/shellcheck: shellcheck
   # Test label -> top-level test function (docs/testing.md 3.2).
   TEST_FUNCS:
     map:
@@ -77,7 +97,7 @@ tasks:
 
           # 8. tools
           missing=""
-          for c in {{.REQUIRED_COMMANDS}}; do
+          for c in {{.HOST_COMMANDS}}{{range $pkg, $cmds := .AQUA_COMMANDS}} {{$cmds}}{{end}}; do
             command -v "$c" >/dev/null || missing="$missing $c"
           done
           if [ -z "$missing" ]; then ok "tools: all found"; else ng "tools: missing:$missing" "run 'task setup' (docker, curl and go come from the host)"; fi
@@ -90,7 +110,7 @@ tasks:
     cmds:
       - cmd: |
           rc=0
-          for t in lint:yaml lint:actions lint:go lint:links lint:diagrams; do
+          for t in lint:yaml lint:tools lint:actions lint:go lint:links lint:diagrams; do
             echo "==> $t"
             {{.TASK_EXE}} "$t" || { echo "FAILED: $t"; rc=1; }
           done
@@ -100,10 +120,21 @@ tasks:
     cmds:
       - uvx yamllint@{{.YAMLLINT_VERSION}} -s .
 
-  lint:actions:
+  lint:tools:
     cmds:
+      # The packages in aqua.yaml and the keys of AQUA_COMMANDS must match.
+      - cmd: |
+          diff -u \
+            --label aqua.yaml <(yq '.packages[].name | sub("@.*$", "")' aqua.yaml | sort) \
+            --label AQUA_COMMANDS <(printf '%s\n' {{range $pkg, $cmds := .AQUA_COMMANDS}}{{$pkg}} {{end}} | sort)
+
+  lint:actions:
+    vars:
+      WORKFLOW: ../../.github/workflows/kindcluster-mcs-gateway.yml
+    cmds:
+      - actionlint {{.WORKFLOW}}
       # Offline check: every `uses:` must be pinned to a full-length SHA with a version comment.
-      - pinact run --fix=false --no-api ../../.github/workflows/kindcluster-mcs-gateway.yml
+      - pinact run --fix=false --no-api {{.WORKFLOW}}
 
   lint:go:
     dir: e2e
