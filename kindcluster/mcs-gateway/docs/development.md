@@ -37,7 +37,7 @@
 
 ### Step 3: テストを書いて再現可能にする
 
-- Step 1 のテスト仕様の各行を、Ginkgo の spec として実装する（[testing.md](testing.md)）。
+- Step 1 のテスト仕様の各行を、Go のサブテスト（名前はテスト ID）として実装する（[testing.md](testing.md)）。
 - **再現性の確認**: クリーンな状態から次の手順を通し、すべて green になることを確認する。
   ```
   task stop
@@ -60,7 +60,11 @@
 ### 3.1 運用
 
 - 各 PR は 1 つ前の PR のブランチを base にする。ブランチ名は `mcsgw/NN-<topic>`。
-- 下から順にマージし、マージしたら上の PR を rebase する。
+- 下から順にマージする。マージ方法は **Create a merge commit** にする（squash merge と rebase merge は使わない）。
+  - squash merge や rebase merge では、下の PR のコミットが別の SHA で `main` に入る。上のブランチに残った元のコミットは未マージ扱いになり、毎回 `git rebase --onto` で積み直す必要がある。
+  - merge commit なら、下のブランチを消すと GitHub が上の PR の base を `main` に付け替え、差分もその PR の分だけになる。rebase は要らない。
+  - 例外: PR 00（#33）は squash merge した。上に積んだ PR がまだなかったので影響はない。
+- `main` の履歴が読みやすいように、PR を出す前にブランチ内のコミットを整理しておく。
 - 各 PR は、2 章の 3 ステップをすべて含む。テストのない PR は作らない（00 と 01 を除く）。
 
 ### 3.2 PR 一覧
@@ -70,7 +74,7 @@
 | # | ブランチ | 内容 | 主に書くドキュメント | テストラベル |
 |---|---|---|---|---|
 | 00 | `mcsgw/00-design` | ドキュメント一式（本書を含む） | すべて（`Draft`） | — |
-| 01 | `mcsgw/01-skeleton` | aqua.yaml、Taskfile の骨組み（`setup`、`check-host`、`lint`、`test`）、e2e の suite とヘルパー、CI、バージョン固定 | [operations.md](operations.md)、[testing.md](testing.md) | —（CI の静的テストと `ginkgo --dry-run` が green であること） |
+| 01 | `mcsgw/01-skeleton` | aqua.yaml、Taskfile の骨組み（`setup`、`check-host`、`lint`、`test`、`docs`）、e2e の suite とヘルパー、CI、バージョン固定 | [operations.md](operations.md)、[testing.md](testing.md) | —（CI の静的テストと `go test -list` が green であること） |
 | 02 | `mcsgw/02-fabric` | containerlab、kind 3 クラスタ（CNI なし）、FRR、sidecar、host 経路 | [network.md](network.md) | `fabric` |
 | 03 | `mcsgw/03-cilium` | Cilium（KPR、native routing、multi-pool IPAM） | [cilium.md](cilium.md) 1〜3 章 | `cilium` |
 | 04 | `mcsgw/04-bgp` | BGP Control Plane、LB IPAM | [cilium.md](cilium.md) 4 章 | `bgp` |
@@ -99,7 +103,7 @@ PR をまたいで名前がぶれないように、ここで固定する。変�
 | kind クラスタ名 | `edge`, `core1`, `core2` |
 | kube context | `kind-edge`, `kind-core1`, `kind-core2` |
 | host の IF | `to-mcsgw` |
-| Ginkgo のラベル | `fabric`, `cilium`, `bgp`, `dsr`, `gateway`, `mcs`, `multicluster-gateway` |
+| テストのラベル | `fabric`, `cilium`, `bgp`, `dsr`, `gateway`, `mcs`, `multicluster-gateway`（テスト関数との対応は [testing.md](testing.md) 3.2） |
 | テスト ID | `<ラベル>-NN`（例: `fabric-01`、`multicluster-gateway-02`） |
 | Namespace | Cilium: `kube-system`、Envoy Gateway: `envoy-gateway-system`、MCS: `mcs-system`、サンプル: `demo` |
 | サンプル app | `demo/echo`（port 8080）。応答にクラスタ名とノード名を含める |
@@ -126,6 +130,8 @@ kindcluster/mcs-gateway/
 │   └── images/                    # 生成した SVG (*.svg)
 ├── Taskfile.yaml
 ├── aqua.yaml
+├── aqua-checksums.json
+├── .yamllint.yaml
 ├── topology.clab.yaml
 ├── kind/
 ├── frr/
@@ -159,8 +165,8 @@ kindcluster/mcs-gateway/
   d2 --layout elk --theme 0 --pad 24 docs/diagrams/<name>.d2 docs/images/<name>.svg
   ```
   `--dark-theme` は付けない。図は固定の淡い塗り色（`style.fill`）を使う。ダークテーマにすると文字色だけが明るくなり、塗り色はそのままなのでコントラストが足りなくなる。SVG は白背景のライトテーマに固定し、GitHub のダークモードでも白いカードとして表示させる。
-- d2 はマシン全体で使うツールとして、yatate（tomei の `cliTools`）で管理する。バージョンは [operations.md](operations.md) 2 章の表に従う。ラボの aqua.yaml には入れない。
-  - CI（GitHub Actions）には yatate がないので、ワークフローで d2 の公式リリースを同じバージョンで取得する。yatate のバージョンを上げたら、ワークフローのバージョンと SVG もあわせて更新する。
+- d2 は、ほかのツールと同じくラボの aqua.yaml で固定する（パッケージ名は `d2lang/d2`）。CI も aqua で同じ版を入れる。バージョンを上げたら、`task docs` で SVG も作り直す。
+  - マシン全体で使う d2 は、別に yatate（tomei の `cliTools`）でも管理している。ラボのディレクトリの中では、PATH の順序で aqua の d2 が使われる。
 - 図を変えたら、ソースと SVG を同じコミットに入れる。CI は `task docs` を再実行し、生成物に差分がないことを確かめる（[testing.md](testing.md) 4 章）。
 - 図は ASCII アートで書かない。表や箇条書きで足りるものは図にしない。
 - 図の内容（アドレス、ASN、名前）は本文の表と一致させる。本文を変えたら図も直す。

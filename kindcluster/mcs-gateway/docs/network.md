@@ -177,7 +177,7 @@ Taskfile のタスク: `deploy-fabric`。`start` と `stop` からも呼ばれ�
 | fabric-09 | 冪等性 | `task start` を 2 回実行する | 2 回目もエラーにならず、fabric-01〜fabric-08 が成り立つ |
 | fabric-10 | 後片付け | `task stop` の後に `docker ps`、`ip link`、`ip route` を見る | `clab-mcsgw-*`、kind ノード、`to-mcsgw`、追加した経路が残っていない |
 
-fabric-09 と fabric-10 は Ginkgo ではなく、[development.md](development.md) の再現性確認の手順で確かめる。
+fabric-09 と fabric-10 は Go のテストではなく、[development.md](development.md) の再現性確認の手順で確かめる。
 
 ---
 

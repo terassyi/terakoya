@@ -1,0 +1,6 @@
+# docs/testing.md 4.1
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable

@@ -1,0 +1,37 @@
+# kindcluster/mcs-gateway static checks (kindcluster/mcs-gateway/docs/testing.md 4.2)
+name: kindcluster/mcs-gateway
+on:
+  pull_request:
+    paths:
+      - "kindcluster/mcs-gateway/**"
+      - ".github/workflows/kindcluster-mcs-gateway.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "kindcluster/mcs-gateway/**"
+      - ".github/workflows/kindcluster-mcs-gateway.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: kindcluster/mcs-gateway
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: kindcluster/mcs-gateway/e2e/go.mod
+          cache-dependency-path: kindcluster/mcs-gateway/e2e/go.sum
+      - uses: aquaproj/aqua-installer@611554c6f0137ba41c8dd15aca8bee82504ea461 # v4.1.1
+        with:
+          aqua_version: v2.66.1
+          aqua_opts: ""
+          working_directory: kindcluster/mcs-gateway
+      - run: task lint

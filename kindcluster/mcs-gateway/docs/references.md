@@ -3,8 +3,8 @@
 mcs-gateway の設計と実装で参照する文献の一覧。
 
 - 各コンポーネントのドキュメントからは、ここの ID（例: `[C-4]`）で参照する。読んで確かめたことは、参照する側のドキュメントの本文に書く。
-- URL はすべて 2026-10-27 時点で到達できることを確認済み。
-- docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.18/`）。
+- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11 は 2026-11-06 に追加・確認）。
+- docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.20/`）。
 - 新しく文献を見つけたら、該当するカテゴリに追記する。
 
 列「PR」は、主にどの PR で参照するかを示す（[development.md](development.md) 3.2）。
@@ -25,7 +25,7 @@ mcs-gateway の設計と実装で参照する文献の一覧。
 | I-8 | neco-apps-lite `network/DESIGN.md`、`network/README.md` | 00, 01 | ネットワーク設計書の粒度。ホストの前提条件（Docker の storage driver など） |
 | I-9 | neco-apps-lite `aqua.yaml`、`Taskfile.yaml`、`.github/` の composite actions | 01, 09 | ツールのバージョン固定、CI 上での kind 起動 |
 | I-10 | terakoya `kindcluster/cilium-bgp-cp/`（`lab.yaml`、`Makefile`） | 02, 04 | FRR を containerlab で動かす設定例（peer-group、`remote-as external`）、Cilium BGP CP の旧 API での実例 |
-| I-11 | terakoya `kindcluster/coil-stand-alone-egress-compatibility/` | 01 | Go + Ginkgo による E2E テストの構成（`suite_test.go`） |
+| I-11 | terakoya `kindcluster/coil-stand-alone-egress-compatibility/` | 01 | Go による E2E テストの構成と、`kubectl` を呼ぶヘルパー（`suite_test.go`）。ここは Ginkgo を使っているが、本ラボでは使わない |
 | I-12 | terakoya `docs/dotfiles-migration.md` | 00 | リポジトリ内の設計書の書き方 |
 
 neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lite/` からの相対で、terakoya のパスはリポジトリのルートからの相対。
@@ -55,6 +55,7 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | C-17 | [Kubernetes Configuration（Cilium）](https://docs.cilium.io/en/stable/network/kubernetes/configuration/) | 03 | Kubernetes 側の設定項目 |
 | C-18 | [Gateway API Support（Cilium）](https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/) | 06 | Cilium 内蔵の Gateway API を無効にする理由（Envoy Gateway と競合させない）の確認 |
 | C-19 | [Multi-Cluster Services API（Cilium ClusterMesh）](https://docs.cilium.io/en/stable/network/clustermesh/mcsapi/) | 07 | 本ラボでは採らないが、CoreDNS の要件の参考になる。CoreDNS 1.12.2 以降が必要、Kubernetes 1.35 で既定で入る、`serviceimports` を list と watch する RBAC、Corefile への `clusterset.local` と `multicluster` の追加 |
+| C-20 | [Kubernetes Compatibility（v1.20）](https://docs.cilium.io/en/v1.20/network/kubernetes/compatibility/) | 01 | Cilium 1.20 が e2e で確かめている Kubernetes は 1.33〜1.36。Kubernetes のバージョン選定に使った |
 
 ---
 
@@ -69,6 +70,7 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | E-5 | [Envoy Gateway API Reference（extension types）](https://gateway.envoyproxy.io/docs/api/extension_types/) | 06 | EnvoyProxy（Service type、externalTrafficPolicy など） |
 | E-6 | [Envoy Gateway: Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/) | 01, 06 | Envoy Gateway、Gateway API、Kubernetes のバージョンの対応 |
 | E-7 | [envoyproxy/gateway（GitHub）](https://github.com/envoyproxy/gateway) | 06, 08 | ServiceImport の endpoint 解決の実装（EndpointSlice のラベル `multicluster.kubernetes.io/service-name`）を、ソースで確認する |
+| E-8 | [Envoy Gateway Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/) | 01 | v1.9 は Envoy Proxy 1.39、Gateway API v1.6.1、Kubernetes 1.33〜1.36 に対応する。Kubernetes と Gateway API のバージョン選定に使った |
 | G-1 | [Gateway API](https://gateway-api.sigs.k8s.io/) | 06 | 仕様全般 |
 | G-2 | [HTTPRoute](https://gateway-api.sigs.k8s.io/reference/api-types/httproute/) | 06, 08 | backendRefs、重み、マッチ条件 |
 | G-3 | [GEP-1748: Gateway API Interaction with Multi-Cluster Services](https://gateway-api.sigs.k8s.io/geps/gep-1748/) | 08 | ServiceImport を backendRef にするときの意味論 |
@@ -139,8 +141,12 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 |---|---|---|---|
 | T-1 | [Task（go-task）](https://taskfile.dev/) | 01 | Taskfile の書き方（vars、deps、`status` による冪等化、`preconditions`） |
 | T-2 | [aqua](https://aquaproj.github.io/) | 01 | `aqua.yaml`、checksum の検証、policy |
-| T-3 | [Ginkgo](https://onsi.github.io/ginkgo/) | 01〜08 | suite の構成、`Eventually`、`Ordered` |
-| T-4 | [Ginkgo: Spec Labels](https://onsi.github.io/ginkgo/#spec-labels) | 01 | `Label(...)` と `--label-filter`（`task test LABEL=`） |
+| T-3 | [Go: testing パッケージ](https://pkg.go.dev/testing) | 01〜08 | `TestMain`、`t.Run` のサブテスト、`-run` のパターン（`Test/Sub` の形）、`-list`、`t.Cleanup` |
+| T-4 | [testify](https://github.com/stretchr/testify) | 01〜08 | `assert` / `require`、`assert.EventuallyWithT` による待ち合わせ |
 | T-5 | [kubeconform](https://github.com/yannh/kubeconform) | 01 | CI での静的検証。CRD スキーマの取り込み方 |
 | T-6 | [hashicorp/http-echo](https://github.com/hashicorp/http-echo) | 06, 07 | サンプル app の候補（`-text` でクラスタ名を返す） |
 | T-7 | [D2](https://d2lang.com/) | 00〜 | ドキュメントの図の記述言語（レイアウトエンジン、テーマ、sequence diagram） |
+| T-8 | [lychee](https://github.com/lycheeverse/lychee) | 01 | `task lint` のリンクチェック。`--offline` でローカルのリンクだけを見る |
+| T-9 | [yamllint](https://yamllint.readthedocs.io/) | 01 | `task lint` の YAML 検査。`extends: default` と規則の無効化 |
+| T-10 | [pinact](https://github.com/suzuki-shunsuke/pinact) | 01 | action を commit SHA に固定する。`--fix=false --no-api` によるオフラインの検査 |
+| T-11 | [actionlint](https://github.com/rhysd/actionlint) | 01 | `task lint` のワークフロー検査。shellcheck による `run:` の検査 |
