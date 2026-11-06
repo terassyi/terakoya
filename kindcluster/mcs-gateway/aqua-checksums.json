@@ -21,6 +21,16 @@
       "algorithm": "sha256"
     },
     {
+      "id": "github_release/github.com/d2lang/d2/v0.9.0/d2-v0.9.0-linux-amd64.tar.gz",
+      "checksum": "5669DDC46B99E942CC96078F4A4E36D5E62103348F4C05179EDE27802FDD87A9",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/d2lang/d2/v0.9.0/d2-v0.9.0-linux-arm64.tar.gz",
+      "checksum": "AC2C028697199479ACB321DB1E3D68CAEE9F2BA492ED73CAA3CD13F3829BF913",
+      "algorithm": "sha256"
+    },
+    {
       "id": "github_release/github.com/go-task/task/v3.54.0/task_linux_amd64.tar.gz",
       "checksum": "680859DBB4D881A9C72D4D9A8F510825450849AF8567DEACD7302C01124416FB",
       "algorithm": "sha256"

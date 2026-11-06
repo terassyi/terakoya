@@ -4,10 +4,9 @@ version: "3"
 vars:
   # Versions not managed by aqua (docs/operations.md 2).
   YAMLLINT_VERSION: 1.38.0
-  D2_VERSION: v0.9.0
   D2_FLAGS: --layout elk --theme 0 --pad 24
   # Commands that must be on PATH (docs/operations.md 1, item 8).
-  REQUIRED_COMMANDS: docker curl go kind containerlab kubectl helm kustomize task yq jq cilium kubeconform lychee uv uvx
+  REQUIRED_COMMANDS: docker curl go d2 kind containerlab kubectl helm kustomize task yq jq cilium kubeconform lychee uv uvx
   # Test label -> top-level test function (docs/testing.md 3.2).
   TEST_FUNCS:
     map:
@@ -138,9 +137,6 @@ tasks:
 
   docs:
     desc: Render docs/diagrams/*.d2 to docs/images/*.svg
-    preconditions:
-      - sh: '[ "$(d2 --version)" = "{{.D2_VERSION}}" ]'
-        msg: "d2 {{.D2_VERSION}} is required (see docs/operations.md 2.2)"
     cmds:
       - for: {var: D2_FILES}
         cmd: d2 {{.D2_FLAGS}} {{.ITEM}} docs/images/{{base .ITEM | trimSuffix ".d2"}}.svg

@@ -66,7 +66,7 @@ kind v0.33.0 の既定のイメージは v1.37.0 なので、kind の設定で�
 | yamllint | 1.38.0 | Taskfile vars（`uvx yamllint@<ver>`） | aqua-registry にないため |
 | Go | 1.26 | `e2e/go.mod`（`go` と `toolchain`） | CI は `actions/setup-go` の `go-version-file` で同じ版を使う |
 | testify | v1.12.1 | `e2e/go.mod` | E2E のアサーションと待ち合わせ（[testing.md](testing.md) 3 章） |
-| d2 | v0.9.0 | yatate（tomei の `cliTools`）。CI はワークフローで公式リリースを取得 | ドキュメントの図の生成にだけ使う |
+| d2 | v0.9.0 | aqua（`d2lang/d2`） | ドキュメントの図の生成にだけ使う。マシン全体用の d2 は yatate でも管理しているが、ラボでは aqua の版を使う |
 
 aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require_checksum: true`）。checksum は `aqua-checksums.json` としてコミットする [T-2]。
 

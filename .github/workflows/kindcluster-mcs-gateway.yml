@@ -12,11 +12,6 @@ on:
       - "kindcluster/mcs-gateway/**"
       - ".github/workflows/kindcluster-mcs-gateway.yml"
 
-env:
-  # Keep in sync with Taskfile.yaml (D2_VERSION) and docs/operations.md 2.2.
-  D2_VERSION: v0.9.0
-  D2_SHA256: 5669ddc46b99e942cc96078f4a4e36d5e62103348f4c05179ede27802fdd87a9
-
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -34,13 +29,4 @@ jobs:
           aqua_version: v2.66.1
           aqua_opts: ""
           working_directory: kindcluster/mcs-gateway
-      - name: Install d2
-        run: |
-          tarball="d2-${D2_VERSION}-linux-amd64.tar.gz"
-          curl -fsSLO "https://github.com/d2lang/d2/releases/download/${D2_VERSION}/${tarball}"
-          echo "${D2_SHA256}  ${tarball}" | sha256sum -c -
-          mkdir -p "$RUNNER_TEMP/d2"
-          tar -xzf "$tarball" -C "$RUNNER_TEMP/d2" --strip-components=1
-          echo "$RUNNER_TEMP/d2/bin" >> "$GITHUB_PATH"
-          rm "$tarball"
       - run: task lint

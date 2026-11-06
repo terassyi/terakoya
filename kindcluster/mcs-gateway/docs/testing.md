@@ -165,9 +165,8 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 
 1. `actions/checkout`
 2. `actions/setup-go`（`go-version-file: kindcluster/mcs-gateway/e2e/go.mod`）
-3. `aquaproj/aqua-installer`（aqua v2.66.1）。ラボの `aqua.yaml` のツールを入れる。
-4. d2 v0.9.0 を公式リリースから取得する。チェックサムを検証し、`PATH` に置く。
-5. `task lint`
+3. `aquaproj/aqua-installer`（aqua v2.66.1）。ラボの `aqua.yaml` のツール（d2 を含む）を入れる。
+4. `task lint`
 
 action は pinact で commit SHA に固定し、バージョンをコメントで残す（例: `actions/checkout@<sha> # v6.1.0`）。タグは付け替えられるので、タグの指定ではサプライチェーン攻撃を防げないため。Dependabot（github-actions）はこの形式のまま、SHA とコメントを一緒に更新する。固定を外すと `task lint` が失敗する。
 

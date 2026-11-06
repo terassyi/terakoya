@@ -165,8 +165,8 @@ kindcluster/mcs-gateway/
   d2 --layout elk --theme 0 --pad 24 docs/diagrams/<name>.d2 docs/images/<name>.svg
   ```
   `--dark-theme` は付けない。図は固定の淡い塗り色（`style.fill`）を使う。ダークテーマにすると文字色だけが明るくなり、塗り色はそのままなのでコントラストが足りなくなる。SVG は白背景のライトテーマに固定し、GitHub のダークモードでも白いカードとして表示させる。
-- d2 はマシン全体で使うツールとして、yatate（tomei の `cliTools`）で管理する。バージョンは [operations.md](operations.md) 2 章の表に従う。ラボの aqua.yaml には入れない。
-  - CI（GitHub Actions）には yatate がないので、ワークフローで d2 の公式リリースを同じバージョンで取得する。yatate のバージョンを上げたら、ワークフローのバージョンと SVG もあわせて更新する。
+- d2 は、ほかのツールと同じくラボの aqua.yaml で固定する（パッケージ名は `d2lang/d2`）。CI も aqua で同じ版を入れる。バージョンを上げたら、`task docs` で SVG も作り直す。
+  - マシン全体で使う d2 は、別に yatate（tomei の `cliTools`）でも管理している。ラボのディレクトリの中では、PATH の順序で aqua の d2 が使われる。
 - 図を変えたら、ソースと SVG を同じコミットに入れる。CI は `task docs` を再実行し、生成物に差分がないことを確かめる（[testing.md](testing.md) 4 章）。
 - 図は ASCII アートで書かない。表や箇条書きで足りるものは図にしない。
 - 図の内容（アドレス、ASN、名前）は本文の表と一致させる。本文を変えたら図も直す。
