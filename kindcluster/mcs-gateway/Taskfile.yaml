@@ -1,0 +1,157 @@
+# mcs-gateway lab. Tasks are documented in docs/operations.md (3) and docs/testing.md.
+version: "3"
+
+vars:
+  # Versions not managed by aqua (docs/operations.md 2).
+  YAMLLINT_VERSION: 1.38.0
+  D2_VERSION: v0.9.0
+  D2_FLAGS: --layout elk --theme 0 --pad 24
+  # Commands that must be on PATH (docs/operations.md 1, item 8).
+  REQUIRED_COMMANDS: docker curl go kind containerlab kubectl helm kustomize task yq jq cilium kubeconform lychee uv uvx
+  # Test label -> top-level test function (docs/testing.md 3.2).
+  TEST_FUNCS:
+    map:
+      fabric: TestFabric
+      cilium: TestCilium
+      bgp: TestBGP
+      dsr: TestDSR
+      gateway: TestGateway
+      mcs: TestMCS
+      multicluster-gateway: TestMulticlusterGateway
+
+tasks:
+  setup:
+    desc: Install the lab tools with aqua
+    cmds:
+      - aqua install
+
+  check-host:
+    desc: Check the host prerequisites (read only)
+    silent: true
+    cmds:
+      - cmd: |
+          set -u
+          fail=0
+          ng() { echo "NG   $1"; echo "     -> $2"; fail=1; }
+          warn() { echo "WARN $1"; }
+          ok() { echo "OK   $1"; }
+
+          # 1. OS
+          if [ "$(uname -s)" = Linux ] && ! grep -qi microsoft /proc/version; then
+            ok "OS: Linux"
+          else
+            ng "OS: $(uname -s) (WSL2 and macOS are not supported)" "use a Linux host where Docker runs natively"
+          fi
+
+          # 2. CPU / 3. memory (guideline only)
+          cpus=$(nproc)
+          if [ "$cpus" -ge 8 ]; then ok "CPU: $cpus"; else warn "CPU: $cpus (8 or more recommended)"; fi
+          mem_gb=$(awk '/^MemTotal:/ {printf "%d", $2/1024/1024}' /proc/meminfo)
+          if [ "$mem_gb" -ge 24 ]; then ok "memory: ${mem_gb}GB"; else warn "memory: ${mem_gb}GB (24GB or more recommended)"; fi
+
+          # 4. Docker storage driver ("overlayfs" means the containerd snapshotter is enabled)
+          driver=$(docker info --format '{{"{{"}}.Driver{{"}}"}}' 2>/dev/null || echo "unavailable")
+          if [ "$driver" = overlay2 ]; then
+            ok "docker storage driver: overlay2"
+          else
+            ng "docker storage driver: $driver" "use overlay2; on Docker 29+ set \"features\": {\"containerd-snapshotter\": false} in /etc/docker/daemon.json"
+          fi
+
+          # 5. sysctl
+          for kv in fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288; do
+            key=${kv%=*}; min=${kv#*=}
+            cur=$(sysctl -n "$key")
+            if [ "$cur" -ge "$min" ]; then ok "$key: $cur"; else ng "$key: $cur (>= $min required)" "sudo sysctl -w $key=$min"; fi
+          done
+
+          # 6. kernel >= 5.10
+          kver=$(uname -r)
+          major=${kver%%.*}; rest=${kver#*.}; minor=${rest%%.*}
+          if [ "$major" -gt 5 ] || { [ "$major" -eq 5 ] && [ "$minor" -ge 10 ]; }; then
+            ok "kernel: $kver"
+          else
+            ng "kernel: $kver (>= 5.10 required)" "upgrade the kernel"
+          fi
+
+          # 7. sudo
+          if command -v sudo >/dev/null; then ok "sudo: available"; else ng "sudo: not found" "install sudo"; fi
+
+          # 8. tools
+          missing=""
+          for c in {{.REQUIRED_COMMANDS}}; do
+            command -v "$c" >/dev/null || missing="$missing $c"
+          done
+          if [ -z "$missing" ]; then ok "tools: all found"; else ng "tools: missing:$missing" "run 'task setup' (docker, curl and go come from the host)"; fi
+
+          exit $fail
+
+  lint:
+    desc: Run all static checks (docs/testing.md 4.1)
+    silent: true
+    cmds:
+      - cmd: |
+          rc=0
+          for t in lint:yaml lint:go lint:links lint:diagrams; do
+            echo "==> $t"
+            {{.TASK_EXE}} "$t" || { echo "FAILED: $t"; rc=1; }
+          done
+          exit $rc
+
+  lint:yaml:
+    cmds:
+      - uvx yamllint@{{.YAMLLINT_VERSION}} -s .
+
+  lint:go:
+    dir: e2e
+    cmds:
+      - cmd: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
+      - go vet ./...
+      - MCSGW_E2E=1 go test -list '.*' ./...
+
+  lint:links:
+    cmds:
+      - lychee --offline --no-progress 'docs/**/*.md'
+
+  lint:diagrams:
+    cmds:
+      - task: docs
+      - cmd: |
+          rc=0
+          for svg in docs/images/*.svg; do
+            name=$(basename "$svg" .svg)
+            [ -f "docs/diagrams/$name.d2" ] || { echo "orphan SVG: $svg"; rc=1; }
+          done
+          changed=$(git status --porcelain docs/images)
+          if [ -n "$changed" ]; then
+            echo "docs/images is out of date; run 'task docs' and commit the result:"
+            echo "$changed"
+            rc=1
+          fi
+          exit $rc
+
+  docs:
+    desc: Render docs/diagrams/*.d2 to docs/images/*.svg
+    preconditions:
+      - sh: '[ "$(d2 --version)" = "{{.D2_VERSION}}" ]'
+        msg: "d2 {{.D2_VERSION}} is required (see docs/operations.md 2.2)"
+    cmds:
+      - for: {var: D2_FILES}
+        cmd: d2 {{.D2_FLAGS}} {{.ITEM}} docs/images/{{base .ITEM | trimSuffix ".d2"}}.svg
+    vars:
+      D2_FILES:
+        sh: ls docs/diagrams/*.d2
+
+  test:
+    desc: Run e2e tests. LABEL=<label> or ID=<test id> narrows them (docs/testing.md 3.6)
+    dir: e2e
+    vars:
+      SEL_LABEL: '{{if .ID}}{{regexReplaceAll "-[0-9]+$" .ID ""}}{{else}}{{.LABEL}}{{end}}'
+      SEL_FUNC: '{{if .SEL_LABEL}}{{get .TEST_FUNCS .SEL_LABEL}}{{end}}'
+      RUN: '{{if .ID}}^{{.SEL_FUNC}}$/^{{.ID}}${{else if .SEL_FUNC}}^{{.SEL_FUNC}}${{end}}'
+    preconditions:
+      - sh: '[ -z "{{.SEL_LABEL}}" ] || [ -n "{{.SEL_FUNC}}" ]'
+        msg: "unknown label '{{.SEL_LABEL}}' (labels: {{keys .TEST_FUNCS | sortAlpha | join \", \"}})"
+    cmds:
+      - MCSGW_E2E=1 go test -count=1 -v -timeout 60m {{if .RUN}}-run '{{.RUN}}'{{end}} ./...
