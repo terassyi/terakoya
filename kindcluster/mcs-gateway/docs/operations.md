@@ -1,6 +1,6 @@
 # 運用（実行環境 / バージョン / タスク / 起動と停止）
 
-- ステータス: `Reviewed`
+- ステータス: `Draft`
 - 関連: [network.md](network.md)、[testing.md](testing.md)、[development.md](development.md)
 
 ## 1. ホストの前提条件
@@ -15,7 +15,7 @@
 | 4 | Docker | storage driver が `overlay2`。Docker 29 以降なら `containerd-snapshotter: false`（neco-apps-lite `network/README.md` と同じ [I-8]） | `docker info --format '{{.Driver}}'` が `overlay2`。containerd snapshotter が有効だと `overlayfs` になるので、この 1 つで両方を確かめられる | 失敗 |
 | 5 | sysctl | `fs.inotify.max_user_instances >= 512`、`fs.inotify.max_user_watches >= 524288` [K-2] | `sysctl -n` | 失敗 |
 | 6 | カーネル | 5.10 以上（Cilium の要件 [C-16]） | `uname -r` | 失敗 |
-| 7 | 権限 | `sudo` を使える（containerlab と host の netns 操作に必要） | `command -v sudo`。`check-host` 自身は sudo を実行しない | 失敗 |
+| 7 | 権限 | `sudo` を使える（`containerlab deploy` と `destroy` に必要。パスワードは人が端末で入力する） | `command -v sudo`。`check-host` 自身は sudo を実行しない | 失敗 |
 | 8 | ツール | host のコマンド（docker、curl、go）と、aqua で入れたツールに PATH が通っている | Taskfile の `HOST_COMMANDS` と `AQUA_COMMANDS` の各コマンドについて `command -v`。`AQUA_COMMANDS` は aqua.yaml のパッケージからコマンドへの対応表で、`task lint`（`lint:tools`）が aqua.yaml との過不足を検査する | 失敗（`task setup` を案内する） |
 
 - 失敗した項目があれば、その項目と直し方をすべて表示してから失敗する。最初の 1 件で止まらない。
@@ -26,7 +26,7 @@
 
 ## 2. バージョン
 
-ツールは `aqua.yaml` で固定し、コンテナイメージ、chart、マニフェストのバージョンは `Taskfile.yaml` の vars で固定する。Go のモジュールは `e2e/go.mod` で固定する。
+ツールは `aqua.yaml` で固定し、chart とマニフェストのバージョンは `Taskfile.yaml` の vars で固定する。containerlab が起動するコンテナのイメージは `topology.clab.yaml` に直接書く（containerlab は `sudo` で動くので、Taskfile から環境変数で渡すと `sudo` に消されるため）。Go のモジュールは `e2e/go.mod` で固定する。
 
 2026-11-05 時点の最新の安定版を調べて決めた。バージョンを変えるときは、この表も更新する。
 
@@ -34,15 +34,16 @@
 
 | コンポーネント | バージョン | 管理場所 | 選んだ理由 |
 |---|---|---|---|
-| Kubernetes（kindest/node） | v1.36.4（digest 付きで固定） | Taskfile vars | Cilium 1.20 [C-20] と Envoy Gateway 1.9 [E-8] が、どちらも 1.36 までを対応範囲に含めている。1.37 はどちらの範囲にも入っていない |
+| Kubernetes（kindest/node） | v1.36.4（digest 付きで固定） | `topology.clab.yaml`（`k8s-kind` ノードの `image`） | Cilium 1.20 [C-20] と Envoy Gateway 1.9 [E-8] が、どちらも 1.36 までを対応範囲に含めている。1.37 はどちらの範囲にも入っていない |
 | Cilium | 1.20.4 | Taskfile vars | 最新の安定版。BGP v2 は `cilium.io/v2` で使える |
 | Envoy Gateway | v1.9.3 | Taskfile vars | 最新の安定版 |
 | Gateway API CRD | v1.6.1 | Envoy Gateway の chart に同梱されたもの | Envoy Gateway 1.9 が対応している版 [E-8]。単独では入れない |
-| FRR | 10.7.1（`quay.io/frrouting/frr:10.7.1`） | Taskfile vars | 最新の安定版 |
+| FRR | 10.7.1（`quay.io/frrouting/frr:10.7.1`） | `topology.clab.yaml` | 最新の安定版 |
+| netshoot | v0.16（`nicolaka/netshoot:v0.16`） | `topology.clab.yaml` | sidecar と spine の NAT 用 |
 | mcs-api | v0.5.2 | Taskfile vars | 最新の安定版 |
 | CoreDNS | v1.14.2 | kindest/node v1.36.4 に同梱（kubeadm の既定） | multicluster プラグインに必要な 1.12.2 以上を満たす（[mcs.md](mcs.md)、[C-19]） |
 
-kind v0.33.0 の既定のイメージは v1.37.0 なので、kind の設定でノードのイメージを明示して v1.36.4 にする。
+kind v0.33.0 の既定のイメージは v1.37.0 なので、`topology.clab.yaml` でノードのイメージを明示して v1.36.4 にする。
 
 ### 2.2 ツール
 
@@ -113,10 +114,10 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 各ステップは、何度実行しても同じ状態になる（冪等）。
 
 1. `check-host`
-2. `deploy-fabric`
-   - `sudo containerlab deploy -t topology.clab.yaml --reconfigure`。kind 3 クラスタ、FRR、sidecar が作られる。
+2. `deploy-fabric`（詳細は [network.md](network.md) 2.7）
+   - ラボがなければ `sudo containerlab deploy -t topology.clab.yaml`。kind 3 クラスタ、FRR、sidecar が作られる。すでにあれば飛ばす。`--reconfigure` は使わない（クラスタが作り直されるため）。
+   - host の `to-mcsgw` の IP と経路は、containerlab の `host-mcsgw` ノードが設定する（[network.md](network.md) 2.5）。Taskfile は、それがあることを読んで確かめるだけ。
    - `kind export kubeconfig --name <cluster>` を 3 クラスタ分実行する。kube context は `kind-edge`、`kind-core1`、`kind-core2`。
-   - host の `to-mcsgw` に IP と経路を設定する（[network.md](network.md) 2.5）。
 3. `deploy-cilium`
 4. `deploy-bgp`
 5. `deploy-dsr`
@@ -129,12 +130,14 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 
 ## 5. 停止手順（`task stop`）
 
-1. `sudo containerlab destroy -t topology.clab.yaml --cleanup`（kind 3 クラスタも消える）
-2. `to-mcsgw` を削除する。リンクが消えると経路も消える。
+1. `sudo containerlab destroy -t topology.clab.yaml --cleanup`（kind 3 クラスタも消える。`spine0` が消えると `to-mcsgw` とその経路も消える）
+2. ユーザーの kubeconfig から `kind-edge`、`kind-core1`、`kind-core2` の context、cluster、user を消す。
 3. 残骸がないことを検査する。
    - `docker ps -a` に `clab-mcsgw-*` と kind ノードがない。
    - `ip link` に `to-mcsgw` がない。
    - `ip route` に 10.69.0.0/16 と 10.80.0.0/14 がない。
+   - `kubectl config get-contexts` に `kind-edge`、`kind-core1`、`kind-core2` がない。
+   - `clab-mcsgw/` ディレクトリがない。
 
 残骸があれば `stop` は失敗する。
 
@@ -144,17 +147,23 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 
 ### 6.1 許可する操作
 
-- `sudo containerlab deploy/destroy`
-- `task start/stop/test` と、それらが行う host netns の変更
+- `task start/test` と、それらが行う操作。ただし、ラボがすでにあるときに限る（`sudo` が要らないとき）
+- `task status` と、ラボの状態を読むだけの操作（`docker ps`、`ip link`、`ip route` など）
+- 人が実行した `task deploy-fabric` と `task stop` の中で containerlab が行う host netns の変更（AI は実行しないが、設計の範囲として明記する）
   - veth `to-mcsgw` の作成と削除
   - 172.30.0.1/30 の付与
   - 経路の追加: 10.69.0.0/16（ノード）と 10.80.0.0/14（LB VIP）を、172.30.0.2（spine）経由にする
-- docker / kind / kubectl / helm の操作
+- docker / kind / kubectl / helm の操作。ユーザーの kubeconfig への `kind-edge`、`kind-core1`、`kind-core2` の追加と削除を含む
 - `task setup`（aqua でラボのツールを入れる）
 
 ### 6.2 してはいけない操作
 
 - 6.1 にない host の設定変更（sysctl の永続化、Docker daemon 設定の書き換えなど）
+- `sudo` の実行。`sudo` が要る手順は人が端末で実行する（パスワードを入力するため）。
+  - ラボがないときの `task deploy-fabric`（`sudo containerlab deploy`）
+  - `task stop`（`sudo containerlab destroy`）
+  - `sudo` を含む手順が必要になったら、AI は止まって人に実行を頼む。
+- Taskfile の中で `containerlab deploy/destroy` 以外に `sudo` を使うこと（`sudo ip` も含む）
   - 前提条件を満たしていない場合は、自分で直さずに人に報告して止まる。
 - `kindcluster/mcs-gateway/` と `.github/workflows/kindcluster-mcs-gateway.yml` 以外の変更。他のラボや dotfiles は触らない。
 - `tomei` / `chezmoi` の実行（リポジトリの CLAUDE.md で禁止されている）
