@@ -25,7 +25,7 @@ containerlab のトポロジ 1 つ（lab 名 `mcsgw`）の中に、次のもの�
   - containerlab v0.82.0 は kind v0.33.0 をライブラリとして組み込んでいる（aqua の kind と同じ版） [L-11]。クラスタを作るのは containerlab で、kind の CLI は kubeconfig の書き出しにだけ使う。
   - ノードのイメージは `k8s-kind` ノードの `image` に digest 付きで書く（`kindest/node:v1.36.4@sha256:...`）。
   - `wait: 0s` を指定する。既定では Ready になるまで最大 15 分待つが、CNI がないのでノードは Ready にならない。
-  - `kubeconfig` を指定し、kind が書く kubeconfig をラボのディレクトリ（`clab-mcsgw/<cluster>/kubeconfig`）に置く。containerlab は root で動くので、指定しないと root の `~/.kube/config` が書き換わる。
+  - `kubeconfig: kubeconfig` を指定し、kind が書く kubeconfig をラボのディレクトリ（`clab-mcsgw/<cluster>/kubeconfig`）に置く。containerlab は root で動くので、指定しないと root の `~/.kube/config` が書き換わる。相対パスはノードのラボディレクトリ（`clab-mcsgw/<cluster>/`）を基準に解決される（containerlab v0.82.0 の `k8s_kind.go` [L-11]）。
   - containerlab v0.82.0 では、これらはノード定義の直下のキー（`wait`、`kubeconfig`）として書く。neco-apps-lite の `extras.k8s_kind.deploy.wait` は古い書き方なので使わない。
 - kind が作るノードコンテナ（`<cluster>-control-plane`、`<cluster>-worker`、`<cluster>-worker2`）は、`ext-container` として定義する。こうするとリンクの端点に使える [L-2]。neco-apps-lite と同じ方式 [I-2]。
 - 各 kind ノードには sidecar（`kind: linux`、`network-mode: container:<kind ノード名>`）を置く [L-4]。ToR とのリンクはこの sidecar に張り、kind ノードの netns に `node0` を生やす。sidecar の `exec` で次を設定する。
@@ -33,7 +33,7 @@ containerlab のトポロジ 1 つ（lab 名 `mcsgw`）の中に、次のもの�
   ip addr add <node IP>/24 dev node0
   ip route replace default via <ToR GW> dev node0
   ```
-  - sidecar のイメージは `nicolaka/netshoot:v0.16` [L-10]。kind ノードと netns を共有するので、テストの `ping`、`curl`、`tcpdump`（PR 05）も sidecar の中で実行する。kindest/node のイメージに入っているツールに頼らないため。
+  - sidecar のイメージは `nicolaka/netshoot:v0.16` [L-10]。netshoot の既定のコマンド（`zsh`）は端末がないとすぐ終わるので、`cmd: sleep infinity` で動かし続ける（`nat-spine0`、`host-mcsgw` も同じ）。kind ノードと netns を共有するので、テストの `ping`、`curl`、`tcpdump`（PR 05）も sidecar の中で実行する。kindest/node のイメージに入っているツールに頼らないため。
 - `eth0`（docker の `kind` ネットワーク）は、API server の名前解決と到達にだけ使う。ノード、Pod、VIP の通信と、イメージの pull はすべて `node0` 経由になる。
 
 ![kind ノードの netns と sidecar](images/node-netns.svg)
@@ -49,7 +49,11 @@ containerlab のトポロジ 1 つ（lab 名 `mcsgw`）の中に、次のもの�
 - `networking.disableDefaultCNI: true`
 - `networking.kubeProxyMode: none`
 - `networking.podSubnet` と `networking.serviceSubnet` は 3 章の値にする。
-- ノードごとの `kubeadmConfigPatches` で、kubelet の `node-ip` を `node0` のアドレスに固定する。control-plane では `InitConfiguration` の `localAPIEndpoint.advertiseAddress` も同じアドレスにする。これで Node の `INTERNAL-IP` が 10.69.x.x になる。
+- ノードごとの `kubeadmConfigPatches` で、kubelet の `node-ip` を `node0` のアドレスに固定する。これで Node の `INTERNAL-IP` が 10.69.x.x になる。
+- control-plane の `localAPIEndpoint.advertiseAddress` は指定しない。API server と etcd は kind の既定どおり `eth0`（docker の `kind` ネットワーク）のアドレスを使う。
+  - kind がクラスタを作る時点では、node0 はまだない（sidecar は kind がクラスタを作り終えてから作られる）。`advertiseAddress` に node0 の IP を指定すると、etcd がそのアドレスで待ち受けられずに起動せず、`kubeadm init` が失敗する（`bind: cannot assign requested address`）。実際に試して確かめた。
+  - kubelet は `node-ip` のアドレスがなくてもエラーを出しながら動き続け、node0 に IP が付くと Node の `INTERNAL-IP` をそのアドレスにする。これも試して確かめた。それまでの間、Node のアドレスは空になる。
+  - API server を `eth0` で使うのは、2.1 の「`eth0` は API server の名前解決と到達にだけ使う」と一致する。`default/kubernetes` の Endpoint は `eth0` のアドレス（172.18.0.x）になる。
 
 kind v0.33.0 は、Kubernetes 1.36 以降には kubeadm の `v1beta4` の設定を作る。`v1beta4` では `kubeletExtraArgs` が `name` と `value` のリストになる。kind は patch の `kubeletExtraArgs` を名前でマージするので、patch は `apiVersion` を書かずにリストの形で書く（kind v0.33.0 の `pkg/internal/patch` で確認した [K-4]）。
 
@@ -63,8 +67,6 @@ nodes:
           kubeletExtraArgs:
             - name: node-ip
               value: "10.69.0.11"
-        localAPIEndpoint:
-          advertiseAddress: "10.69.0.11"
   - role: worker
     kubeadmConfigPatches:
       - |
@@ -75,7 +77,7 @@ nodes:
               value: "10.69.0.12"
 ```
 
-- neco-apps-lite の patch は `apiVersion: kubeadm.k8s.io/v1beta3` を書いている。kind は `apiVersion` が一致しない patch を当てないので、Kubernetes 1.36 で同じ書き方をすると、patch は黙って無視される。
+- neco-apps-lite のノードの patch は、`kubeletExtraArgs` を `v1beta3` の map の形（`node-ip: "..."`）で書いている。`v1beta4` ではリストの形なので、そのままでは使えない。また、`ClusterConfiguration` の patch には `apiVersion: kubeadm.k8s.io/v1beta3` を書いている。kind は `apiVersion` が一致しない patch を当てないので、Kubernetes 1.36 で同じ書き方をすると、その patch は黙って無視される。
 
 ### 2.3 FRR
 
@@ -92,6 +94,7 @@ nodes:
   - 同じ LB VIP を複数ノードから受けるので、`maximum-paths` で ECMP にする。カーネルの ECMP は L4 のハッシュにする（`net.ipv4.fib_multipath_hash_policy=1`、neco-apps-lite と同じ）。
 - **spine**:
   - 全 ToR と eBGP で張る。デフォルト経路は containerlab の管理ネットワーク（`eth0`）のまま。
+  - spine からは経路を広報しない（`redistribute` を書かない）。ToR のデフォルト経路が spine を向くので、ToR は spine の接続先（host のリンクなど）の経路を持たなくてよい。
   - ノードのデフォルト経路は node0 を向くので、外向きの通信（イメージの pull を含む）は spine を通る。spine の `eth0` で、ノードのアドレスを MASQUERADE する。
     ```
     iptables -t nat -A POSTROUTING -s 10.69.0.0/16 -o eth0 -j MASQUERADE
@@ -266,9 +269,7 @@ fabric-10 と fabric-11 は Go のテストではなく、[development.md](devel
 
 ## 7. 未確定事項
 
-- **node0 ができる前の kubelet と etcd:** kind はクラスタを作るときに、まだ存在しない node0 の IP を kubelet の `node-ip` と control-plane の `advertiseAddress` に使う（node0 は、その後の sidecar の `exec` で付く）。neco-apps-lite（Kubernetes 1.34）は同じ順序で動いているが、1.36 でも kubeadm init が通るかを実装時に確かめる。通らない場合は止まって相談する。
-- **`host-mcsgw` の `exec` の順序:** `exec` が実行される時点で、host リンク（`to-mcsgw`）ができているかを実装時に確かめる。できていない場合は、`exec` の中で `to-mcsgw` が現れるまで待つ。
-- **`kubeconfig` の置き場所:** containerlab のコードでは、相対パスはノードのラボディレクトリ（`clab-mcsgw/<cluster>/`）を基準に解決される。ドキュメントには「トポロジファイルからの相対パス」とあり、食い違っている。実装時にどちらになるかを確かめ、どちらでも `.gitignore` の対象になるようにする。
+- **`host-mcsgw` の `exec` の順序:** `exec` が実行される時点で、host リンク（`to-mcsgw`）ができているかはわからない。そのため、最初の `exec` で `to-mcsgw` が現れるまで最大 60 秒待つ。
 
 ---
 

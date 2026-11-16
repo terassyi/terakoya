@@ -1,6 +1,6 @@
 # 運用（実行環境 / バージョン / タスク / 起動と停止）
 
-- ステータス: `Draft`
+- ステータス: `Reviewed`
 - 関連: [network.md](network.md)、[testing.md](testing.md)、[development.md](development.md)
 
 ## 1. ホストの前提条件

@@ -1,6 +1,6 @@
 # テスト
 
-- ステータス: `Draft`
+- ステータス: `Reviewed`
 - 関連: [development.md](development.md)（テストを書くタイミング）、[operations.md](operations.md)（`task test`、`task lint`、バージョン）
 
 ## 1. 方針
@@ -101,6 +101,8 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | `kubectlExec(cluster, ns, pod, cmd...)` | Pod 内でコマンドを実行する |
 | `dockerExec(container, cmd...)` | `docker exec <container> <cmd>` を実行する |
 | `nodeExec(node, cmd...)` | kind ノード（コンテナ名 `<cluster>-control-plane` など）内でコマンドを実行する |
+| `labNodes()` / `findNode(t, name)` | kind ノードの一覧（コンテナ名、node0 の IP、ToR GW）。[network.md](network.md) 3.1 の表から作る（PR 02） |
+| `sidecarExec(node, cmd...)` | kind ノードの sidecar（`clab-mcsgw-sc-<node>`）でコマンドを実行する。ノードと同じ netns で、netshoot のツールを使える（PR 02） |
 | `vtyshJSON(router, cmd, obj)` | `docker exec clab-mcsgw-<router> vtysh -c '<cmd> json'` の出力を `obj` に読み込む |
 | `hostCurl(args...)` | host で `curl` を実行する（host から VIP への到達性を見るため） |
 | `applyManifest(t, cluster, yaml)` | テスト用 Pod と Service を作り、`t.Cleanup` に削除（`--ignore-not-found`）を登録する |

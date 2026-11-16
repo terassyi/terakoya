@@ -1,6 +1,9 @@
 # docs/testing.md 4.1
 extends: default
 
+# Skip generated files such as the containerlab lab directory (clab-mcsgw/).
+ignore-from-file: .gitignore
+
 rules:
   line-length: disable
   document-start: disable

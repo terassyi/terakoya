@@ -1,0 +1,33 @@
+# kind cluster core2 (docs/network.md 2.2). Created by containerlab (topology.clab.yaml).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  kubeProxyMode: none
+  podSubnet: 10.102.0.0/16
+  serviceSubnet: 10.112.0.0/16
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            - name: node-ip
+              value: "10.69.2.11"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            - name: node-ip
+              value: "10.69.2.12"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            - name: node-ip
+              value: "10.69.2.13"
