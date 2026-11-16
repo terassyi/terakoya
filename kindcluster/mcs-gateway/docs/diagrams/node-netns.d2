@@ -38,6 +38,6 @@ netns: "netns of edge-worker" {
   |
 }
 
-netns.eth0 <-> docker-kind: "API server 名前解決 / image pull"
-netns.node0 <-> tor: "clab link\n(Pod / Node / VIP の全トラフィック)"
+netns.eth0 <-> docker-kind: "API server の名前解決と到達"
+netns.node0 <-> tor: "clab link (MTU 1500)\n(Pod / Node / VIP の全トラフィック、image pull)"
 netns.sidecar -> netns.node0: "設定" {style.stroke-dash: 3}

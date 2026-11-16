@@ -1,4 +1,4 @@
-# containerlab トポロジ (lab: mcsgw) のリンクとインターフェース
+# containerlab トポロジ (lab: mcsgw) のリンクとインターフェース。リンクの MTU はすべて 1500
 direction: down
 
 classes: {
@@ -11,6 +11,8 @@ classes: {
 host: "host netns" {
   style: {fill: "#F3F4F6"; stroke: "#6B7280"}
   to-mcsgw: "to-mcsgw\n172.30.0.1/30"
+  hostcfg: "clab-mcsgw-host-mcsgw\n(network-mode: host)\nip addr / ip route replace" {class: sidecar}
+  hostcfg -> to-mcsgw {style.stroke-dash: 3}
 }
 
 spine0: "clab-mcsgw-spine0 (FRR)" {
@@ -20,6 +22,8 @@ spine0: "clab-mcsgw-spine0 (FRR)" {
   if-core1: "tor-core1\n10.255.0.2"
   if-core2: "tor-core2\n10.255.0.4"
   eth0: "eth0 (docker)"
+  nat: "sidecar: nat-spine0\niptables MASQUERADE\n10.69.0.0/16 -> eth0" {class: sidecar}
+  nat -> eth0 {style.stroke-dash: 3}
 }
 
 tor-edge: "clab-mcsgw-tor-edge (FRR)" {

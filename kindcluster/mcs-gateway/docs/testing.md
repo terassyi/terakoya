@@ -101,6 +101,8 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | `kubectlExec(cluster, ns, pod, cmd...)` | Pod 内でコマンドを実行する |
 | `dockerExec(container, cmd...)` | `docker exec <container> <cmd>` を実行する |
 | `nodeExec(node, cmd...)` | kind ノード（コンテナ名 `<cluster>-control-plane` など）内でコマンドを実行する |
+| `labNodes()` / `findNode(t, name)` | kind ノードの一覧（コンテナ名、node0 の IP、ToR GW）。[network.md](network.md) 3.1 の表から作る（PR 02） |
+| `sidecarExec(node, cmd...)` | kind ノードの sidecar（`clab-mcsgw-sc-<node>`）でコマンドを実行する。ノードと同じ netns で、netshoot のツールを使える（PR 02） |
 | `vtyshJSON(router, cmd, obj)` | `docker exec clab-mcsgw-<router> vtysh -c '<cmd> json'` の出力を `obj` に読み込む |
 | `hostCurl(args...)` | host で `curl` を実行する（host から VIP への到達性を見るため） |
 | `applyManifest(t, cluster, yaml)` | テスト用 Pod と Service を作り、`t.Cleanup` に削除（`--ignore-not-found`）を登録する |
@@ -139,7 +141,7 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | テストの列挙 | `e2e/` | `e2e/` で `MCSGW_E2E=1 go test -list '.*' ./...`。テストがコンパイルでき、列挙できること | 01 |
 | リンクチェック | `docs/**/*.md` | `lychee --offline --no-progress 'docs/**/*.md'`。相対リンクの切れを見る。外部 URL は見ない（CI が外部サイトの状態で落ちないようにするため） [T-8] | 01 |
 | 図の生成物 | `docs/images/*.svg` | `task docs` を実行し、`git status --porcelain docs/images` が空であること。`.d2` に対応する `.svg` がない、または `.svg` だけが残っている場合も失敗する | 01 |
-| テスト ID の対応 | `e2e/*_test.go` とドキュメントのテスト仕様 | 実装済みのラベル（`<label>_test.go` があるもの）について、ドキュメントの表のテスト ID と、コードの `t.Run("<ID>"` が過不足なく一致すること。テスト ID を `go test -list` で列挙できないので、grep で突き合わせる。再現性確認で確かめる ID（fabric-09、fabric-10）は除く | 02 |
+| テスト ID の対応 | `e2e/*_test.go` とドキュメントのテスト仕様 | 実装済みのラベル（`<label>_test.go` があるもの）について、ドキュメントの表のテスト ID と、コードの `t.Run("<ID>"` が過不足なく一致すること。テスト ID を `go test -list` で列挙できないので、grep で突き合わせる。再現性確認で確かめる ID（fabric-10、fabric-11）は除く | 02 |
 | FRR の設定 | `frr/*.conf` | FRR のコンテナ内で `vtysh --dryrun -f` [F-2] | 02 |
 | kubeconform | Kubernetes マニフェスト | CRD スキーマ込みで検証する [T-5] | 03 |
 | helm template | Cilium の values | values が展開できること | 03 |

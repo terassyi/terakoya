@@ -38,16 +38,17 @@
 ### Step 3: テストを書いて再現可能にする
 
 - Step 1 のテスト仕様の各行を、Go のサブテスト（名前はテスト ID）として実装する（[testing.md](testing.md)）。
-- **再現性の確認**: クリーンな状態から次の手順を通し、すべて green になることを確認する。
+- **再現性の確認**: クリーンな状態から次の手順を通し、すべて green になることを確認する。`sudo` が要る手順（人）は、人が端末で実行する（[operations.md](operations.md) 6 章）。
   ```
-  task stop
-  task start
-  task test
-  task start
-  task test
-  task stop
+  task stop             # 人
+  task deploy-fabric    # 人
+  task start            # AI
+  task test             # AI
+  task start            # AI
+  task test             # AI
+  task stop             # 人
   ```
-  2 回目の `task start` と `task test` で冪等性を、最後の `task stop` で残骸が残らないことを確かめる。
+  2 回目の `task start` と `task test` で冪等性を、最後の `task stop` で残骸が残らないことを確かめる。人が実行した手順のログも PR 説明に貼る。
 - 既存のテストも含めてすべて green であること（回帰がないこと）。
 - `task lint` と CI が green であること。
 - ドキュメントのステータスを `Implemented` にする。ドキュメントと実装が一致していることを、最後にもう一度確かめる。

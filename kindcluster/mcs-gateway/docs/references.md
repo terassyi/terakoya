@@ -3,7 +3,7 @@
 mcs-gateway の設計と実装で参照する文献の一覧。
 
 - 各コンポーネントのドキュメントからは、ここの ID（例: `[C-4]`）で参照する。読んで確かめたことは、参照する側のドキュメントの本文に書く。
-- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11 は 2026-11-06 に追加・確認）。
+- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11、L-10、L-11、K-4 は 2026-11-06 に追加・確認）。
 - docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.20/`）。
 - 新しく文献を見つけたら、該当するカテゴリに追記する。
 
@@ -98,7 +98,7 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 
 | ID | 文献 | PR | 参照する理由 |
 |---|---|---|---|
-| L-1 | [containerlab: k8s-kind](https://containerlab.dev/manual/kinds/k8s-kind/) | 02 | `startup-config` に kind の設定を渡す方法、`extras.k8s_kind`、ノードの命名規則 |
+| L-1 | [containerlab: k8s-kind](https://containerlab.dev/manual/kinds/k8s-kind/) | 02 | `startup-config` に kind の設定を渡す方法、ノード直下のキー `wait` と `kubeconfig`（v0.82.0。旧来の `extras.k8s_kind` は使わない）、ノードの命名規則 |
 | L-2 | [containerlab: ext-container](https://containerlab.dev/manual/kinds/ext-container/) | 02 | 外部で作られたコンテナを、リンクの端点として扱う方法 |
 | L-3 | [containerlab: linux kind](https://containerlab.dev/manual/kinds/linux/) | 02 | FRR と sidecar のノード定義、`exec`、`binds` |
 | L-4 | [containerlab: Nodes](https://containerlab.dev/manual/nodes/) | 02 | `network-mode: container:<name>`、`exec`、`env`、`binds` |
@@ -107,9 +107,12 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | L-7 | [containerlab: deploy](https://containerlab.dev/cmd/deploy/) | 02 | `--reconfigure` などの冪等性に関わるオプション |
 | L-8 | [containerlab: tools veth create](https://containerlab.dev/cmd/tools/veth/create/) | 02 | ノードを再作成したときのリンクの張り直し |
 | L-9 | [containerlab 0.50 release notes](https://containerlab.dev/rn/0.50/) | 02 | k8s-kind 統合が入ったときの説明 |
+| L-10 | [nicolaka/netshoot](https://github.com/nicolaka/netshoot) | 02, 05 | sidecar と spine の NAT 用のイメージ（iproute2、iptables、ping、curl、tcpdump） |
+| L-11 | [srl-labs/containerlab v0.82.0 `nodes/k8s_kind/k8s_kind.go`](https://github.com/srl-labs/containerlab/blob/v0.82.0/nodes/k8s_kind/k8s_kind.go) | 02 | `k8s-kind` の実装。組み込みの kind ライブラリ（v0.33.0）、既定の 15 分の待ち時間、`kubeconfig` の相対パスの解決 |
 | K-1 | [kind: Configuration](https://kind.sigs.k8s.io/docs/user/configuration/) | 02 | `networking`（`disableDefaultCNI`、`kubeProxyMode`、`podSubnet`、`serviceSubnet`）、`kubeadmConfigPatches`、ノードごとの patch |
 | K-2 | [kind: Known Issues](https://kind.sigs.k8s.io/docs/user/known-issues/) | 01, 02 | inotify の上限、複数クラスタを起動するときのリソース |
 | K-3 | [kind: Quick Start](https://kind.sigs.k8s.io/docs/user/quick-start/) | 02 | `kind export kubeconfig`、`kind load docker-image` |
+| K-4 | [kind v0.33.0 `pkg/internal/patch/kubeadm_merge.go`](https://github.com/kubernetes-sigs/kind/blob/v0.33.0/pkg/internal/patch/kubeadm_merge.go) | 02 | kubeadm `v1beta4` への patch で、`kubeletExtraArgs` を名前でマージする実装。`apiVersion` が一致しない patch は当たらない（`kubeyaml.go`） |
 
 ---
 

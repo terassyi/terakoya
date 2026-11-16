@@ -37,6 +37,12 @@ vars:
       gateway: TestGateway
       mcs: TestMCS
       multicluster-gateway: TestMulticlusterGateway
+  # Test IDs checked by the reproducibility procedure, not by Go tests (docs/testing.md 4.1).
+  REPRO_TEST_IDS: fabric-10 fabric-11
+  CLUSTERS: edge core1 core2
+  # sudo's secure_path does not include the aqua shims (docs/network.md 2.7).
+  CLAB:
+    sh: echo "sudo $(aqua which containerlab)"
 
 tasks:
   setup:
@@ -110,7 +116,7 @@ tasks:
     cmds:
       - cmd: |
           rc=0
-          for t in lint:yaml lint:tools lint:actions lint:go lint:links lint:diagrams; do
+          for t in lint:yaml lint:tools lint:actions lint:go lint:testids lint:frr lint:links lint:diagrams; do
             echo "==> $t"
             {{.TASK_EXE}} "$t" || { echo "FAILED: $t"; rc=1; }
           done
@@ -144,6 +150,37 @@ tasks:
           if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
       - go vet ./...
       - MCSGW_E2E=1 go test -list '.*' ./...
+
+  lint:testids:
+    # Test IDs in the docs and t.Run("<ID>" in e2e must match, for labels that have a test file.
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          rc=0
+          for f in e2e/*_test.go; do
+            case "$(basename "$f")" in main_test.go|helpers_test.go) continue ;; esac
+            label=$(basename "$f" _test.go | tr _ -)
+            exclude='^({{.REPRO_TEST_IDS | replace " " "|"}})$'
+            doc=$(grep -ohE "^\| $label-[0-9]+ \|" docs/*.md | grep -oE "$label-[0-9]+" | grep -vE "$exclude" | sort -u || true)
+            code=$(grep -ohE "t\.Run\(\"$label-[0-9]+\"" e2e/*_test.go | grep -oE "$label-[0-9]+" | sort -u || true)
+            diff -u --label "docs ($label)" <(echo "$doc") --label "e2e ($label)" <(echo "$code") || rc=1
+          done
+          exit $rc
+
+  lint:frr:
+    # Syntax check of the FRR configs with the image used in topology.clab.yaml.
+    vars:
+      FRR_IMAGE:
+        sh: yq '.topology.nodes.spine0.image' topology.clab.yaml
+      FRR_CONFS:
+        sh: ls frr/*.conf | grep -v '/vtysh.conf$'
+    cmds:
+      - for: {var: FRR_CONFS}
+        cmd: >-
+          docker run --rm --entrypoint vtysh
+          -v "$PWD/frr/vtysh.conf:/etc/frr/vtysh.conf:ro"
+          -v "$PWD/{{.ITEM}}:/tmp/frr.conf:ro"
+          {{.FRR_IMAGE}} --dryrun -f /tmp/frr.conf
 
   lint:links:
     cmds:
@@ -186,4 +223,106 @@ tasks:
       - sh: '[ -z "{{.SEL_LABEL}}" ] || [ -n "{{.SEL_FUNC}}" ]'
         msg: "unknown label '{{.SEL_LABEL}}' (labels: {{keys .TEST_FUNCS | sortAlpha | join \", \"}})"
     cmds:
-      - MCSGW_E2E=1 go test -count=1 -v -timeout 60m {{if .RUN}}-run '{{.RUN}}'{{end}} ./...
+      # Fail when nothing ran (e.g. a mistyped ID) instead of passing silently.
+      - cmd: |
+          set -o pipefail
+          out=$(mktemp)
+          trap 'rm -f "$out"' EXIT
+          MCSGW_E2E=1 go test -count=1 -v -timeout 60m {{if .RUN}}-run '{{.RUN}}'{{end}} ./... 2>&1 | tee "$out"
+          if grep -q 'no tests to run' "$out"; then echo "no tests ran"; exit 1; fi
+
+  start:
+    desc: Build the lab (docs/operations.md 4)
+    cmds:
+      - task: check-host
+      - task: deploy-fabric
+
+  deploy-fabric:
+    desc: containerlab, kind, FRR and the host link (docs/network.md 2.7)
+    silent: true
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          want_clab=$(yq '[.topology.nodes[] | select(.kind == "linux")] | length' topology.clab.yaml)
+          want_kind=$(yq '[.topology.nodes[] | select(.kind == "ext-container")] | length' topology.clab.yaml)
+          count() { docker ps -a -q "$@" | wc -l; }
+          running() { docker ps -q "$@" | wc -l; }
+          # docker ANDs repeated label filters, so count each cluster separately.
+          kind_nodes() { n=0; for c in {{.CLUSTERS}}; do n=$((n + $("$1" --filter label=io.x-k8s.kind.cluster=$c))); done; echo $n; }
+          n_clab=$(running --filter label=containerlab=mcsgw)
+          n_kind=$(kind_nodes running)
+          all_clab=$(count --filter label=containerlab=mcsgw)
+          all_kind=$(kind_nodes count)
+          if [ "$n_clab" -eq "$want_clab" ] && [ "$n_kind" -eq "$want_kind" ]; then
+            echo "lab mcsgw is running; skip containerlab deploy"
+          elif [ "$all_clab" -eq 0 ] && [ "$all_kind" -eq 0 ]; then
+            if [ ! -t 0 ]; then
+              echo "containerlab deploy needs sudo; run 'task deploy-fabric' in a terminal (docs/operations.md 6)" >&2
+              exit 1
+            fi
+            {{.CLAB}} deploy -t topology.clab.yaml
+          else
+            echo "lab mcsgw is partially up (clab $n_clab/$want_clab, kind $n_kind/$want_kind running); run 'task stop' first" >&2
+            exit 1
+          fi
+        interactive: true
+      # The host address and routes are set by the host-mcsgw node (docs/network.md 2.5); only read them here.
+      - cmd: |
+          set -euo pipefail
+          ng() { echo "host link is not ready: $1; run 'task stop' and deploy again" >&2; exit 1; }
+          ip -4 -o addr show dev to-mcsgw 2>/dev/null | grep -q ' 172.30.0.1/30 ' || ng "172.30.0.1/30 on to-mcsgw"
+          for r in 10.69.0.0/16 10.80.0.0/14; do
+            ip -4 route show "$r" | grep -q 'via 172.30.0.2 dev to-mcsgw' || ng "route $r"
+          done
+      - for: {var: CLUSTERS, split: " "}
+        cmd: kind export kubeconfig --name {{.ITEM}}
+
+  stop:
+    desc: Destroy the lab and check that nothing is left (docs/operations.md 5)
+    silent: true
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          # docker ANDs repeated label filters, so count each cluster separately.
+          left=$(docker ps -a -q --filter label=containerlab=mcsgw | wc -l)
+          for c in {{.CLUSTERS}}; do left=$((left + $(docker ps -a -q --filter label=io.x-k8s.kind.cluster=$c | wc -l))); done
+          if [ "$left" -eq 0 ] && [ ! -d clab-mcsgw ] && ! ip link show to-mcsgw >/dev/null 2>&1; then
+            echo "lab mcsgw is not running; skip containerlab destroy"
+            exit 0
+          fi
+          if [ ! -t 0 ]; then
+            echo "containerlab destroy needs sudo; run 'task stop' in a terminal (docs/operations.md 6)" >&2
+            exit 1
+          fi
+          {{.CLAB}} destroy -t topology.clab.yaml --cleanup
+        interactive: true
+      - for: {var: CLUSTERS, split: " "}
+        cmd: |
+          kubectl config delete-context kind-{{.ITEM}} >/dev/null 2>&1 || true
+          kubectl config delete-cluster kind-{{.ITEM}} >/dev/null 2>&1 || true
+          kubectl config delete-user kind-{{.ITEM}} >/dev/null 2>&1 || true
+      - cmd: |
+          rc=0
+          ng() { echo "left over: $1"; rc=1; }
+          [ -z "$(docker ps -a -q --filter label=containerlab=mcsgw)" ] || ng "clab-mcsgw-* containers"
+          for c in {{.CLUSTERS}}; do
+            [ -z "$(docker ps -a -q --filter label=io.x-k8s.kind.cluster=$c)" ] || ng "kind nodes of $c"
+            ! kubectl config get-contexts -o name | grep -qx "kind-$c" || ng "kube context kind-$c"
+          done
+          ! ip link show to-mcsgw >/dev/null 2>&1 || ng "link to-mcsgw"
+          for r in 10.69.0.0/16 10.80.0.0/14; do
+            [ -z "$(ip -4 route show "$r")" ] || ng "route $r"
+          done
+          [ ! -e clab-mcsgw ] || ng "directory clab-mcsgw/"
+          [ "$rc" -eq 0 ] && echo "lab mcsgw is stopped; nothing is left"
+          exit $rc
+
+  status:
+    desc: Show the topology, BGP and clusters (read only)
+    cmds:
+      - cmd: docker ps -a --filter label=containerlab=mcsgw --format 'table {{"{{"}}.Names{{"}}"}}\t{{"{{"}}.Status{{"}}"}}'
+      - cmd: docker exec clab-mcsgw-spine0 vtysh -c 'show bgp summary'
+        ignore_error: true
+      - for: {var: CLUSTERS, split: " "}
+        cmd: kubectl --context kind-{{.ITEM}} get nodes -o wide
+        ignore_error: true

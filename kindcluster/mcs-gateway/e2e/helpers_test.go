@@ -21,6 +21,42 @@ const (
 // clusters are the kind cluster names. The kube context is "kind-<cluster>".
 var clusters = []string{"edge", "core1", "core2"}
 
+// labNode is a kind node of the lab (docs/network.md 3.1, 4).
+type labNode struct {
+	cluster string
+	name    string // container name, e.g. "edge-worker"
+	ip      string // node0 address
+	gw      string // ToR br0 address
+}
+
+// labNodes lists all kind nodes with their node0 addresses.
+func labNodes() []labNode {
+	var nodes []labNode
+	for i, c := range clusters {
+		for j, role := range []string{"control-plane", "worker", "worker2"} {
+			nodes = append(nodes, labNode{
+				cluster: c,
+				name:    c + "-" + role,
+				ip:      fmt.Sprintf("10.69.%d.%d", i, 11+j),
+				gw:      fmt.Sprintf("10.69.%d.1", i),
+			})
+		}
+	}
+	return nodes
+}
+
+// findNode returns the lab node with the given container name.
+func findNode(t *testing.T, name string) labNode {
+	t.Helper()
+	for _, n := range labNodes() {
+		if n.name == name {
+			return n
+		}
+	}
+	t.Fatalf("unknown node %q", name)
+	return labNode{}
+}
+
 // run executes a command and returns its stdout.
 // On failure, the error includes the command line and stderr.
 func run(input []byte, name string, args ...string) ([]byte, error) {
@@ -79,6 +115,12 @@ func dockerExec(container string, cmd ...string) ([]byte, error) {
 // nodeExec runs a command in a kind node container (e.g. "edge-worker").
 func nodeExec(node string, cmd ...string) ([]byte, error) {
 	return dockerExec(node, cmd...)
+}
+
+// sidecarExec runs a command in the sidecar of a kind node (clab-mcsgw-sc-<node>),
+// which shares the node's netns and has the network tools (netshoot).
+func sidecarExec(node string, cmd ...string) ([]byte, error) {
+	return dockerExec("clab-mcsgw-sc-"+node, cmd...)
 }
 
 // vtyshJSON runs `vtysh -c '<cmd> json'` on a FRR router of the lab and reads the output into obj.
