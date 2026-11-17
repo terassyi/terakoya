@@ -21,6 +21,7 @@ spine0: "clab-mcsgw-spine0 (FRR)" {
   if-edge: "tor-edge\n10.255.0.0"
   if-core1: "tor-core1\n10.255.0.2"
   if-core2: "tor-core2\n10.255.0.4"
+  if-dns0: "dns0\n10.255.0.6"
   eth0: "eth0 (docker)"
   nat: "sidecar: nat-spine0\niptables MASQUERADE\n10.69.0.0/16 -> eth0" {class: sidecar}
   nat -> eth0 {style.stroke-dash: 3}
@@ -36,6 +37,14 @@ tor-edge: "clab-mcsgw-tor-edge (FRR)" {
   n0 -> br0: master {style.stroke-dash: 3}
   n1 -> br0: master {style.stroke-dash: 3}
   n2 -> br0: master {style.stroke-dash: 3}
+}
+
+dns0: "clab-mcsgw-dns0 (CoreDNS)\nforward . /etc/resolv.conf (docker DNS)" {
+  class: router
+  uplink: "uplink\n10.255.0.7"
+  eth0: "eth0 (docker)\n上流への問い合わせ"
+  sc: "sidecar: sc-dns0\nip addr / ip route" {class: sidecar}
+  sc -> uplink {style.stroke-dash: 3}
 }
 
 tor-core1: "clab-mcsgw-tor-core1 (FRR)\nbr0 10.69.1.1/24 / uplink 10.255.0.3" {class: router}
@@ -59,6 +68,7 @@ host.to-mcsgw <-> spine0.host0
 spine0.if-edge <-> tor-edge.uplink
 spine0.if-core1 <-> tor-core1
 spine0.if-core2 <-> tor-core2
+spine0.if-dns0 <-> dns0.uplink
 
 tor-edge.n0 <-> edge.cp: "sc-edge-control-plane"
 tor-edge.n1 <-> edge.w: "sc-edge-worker"

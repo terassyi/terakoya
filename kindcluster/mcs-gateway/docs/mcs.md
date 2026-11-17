@@ -51,7 +51,8 @@ mcs-api のリファレンス実装には、クラスタ間で ServiceExport か
 
 ### 2.3 DNS
 
-- CoreDNS 1.12.2 以降では、標準の `kubernetes` プラグインに `multicluster` オプションがある [M-6][C-19]。
+- CoreDNS 1.12.2 以降では、標準の `kubernetes` プラグインに `multicluster` オプションがある [M-6][C-19]。kindest/node v1.36.4 に入っている CoreDNS は v1.14.2 なので、イメージは上げなくてよい（PR 03 で確かめた）。
+- Corefile は PR 03 から `coredns/configmap.yaml` で管理している（[cilium.md](cilium.md) 2.4）。PR 07 では、同じファイルに下の変更を足す。
 - Corefile の変更:
   ```
   kubernetes cluster.local clusterset.local in-addr.arpa ip6.arpa {
@@ -71,7 +72,7 @@ kindcluster/mcs-gateway/
 ├── mcs/
 │   ├── crds/                 # ServiceExport / ServiceImport
 │   ├── controller/           # mcs-api-controller
-│   ├── coredns/              # Corefile パッチ、RBAC
+│   ├── coredns/              # RBAC（Corefile は coredns/configmap.yaml に足す）
 │   └── sync.sh
 └── sample/
     ├── echo.yaml             # Deployment + Service（全クラスタ共通）
@@ -100,7 +101,6 @@ Taskfile のタスク: `deploy-mcs`、`deploy-sample`、`sync-mcs`
 ## 5. 未確定事項
 
 - **mcs-api-controller の役割:** ServiceImport から derived Service を作るのか、ClusterSetIP を払い出すのか。それによって、sync.sh で何をするか、DNS がどの IP を返すかが決まる [M-2]。
-- **CoreDNS のバージョン:** 固定した kindest/node に同梱される CoreDNS が 1.12.2 以上か。足りなければ CoreDNS のイメージだけを上げる。
 - **Envoy Gateway との整合:** sync.sh が作る EndpointSlice のラベルが、Envoy Gateway の解決方法と合っているか（[envoy-gateway.md](envoy-gateway.md) 5 章）。
 
 ---

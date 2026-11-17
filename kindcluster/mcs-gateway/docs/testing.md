@@ -143,9 +143,11 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | 図の生成物 | `docs/images/*.svg` | `task docs` を実行し、`git status --porcelain docs/images` が空であること。`.d2` に対応する `.svg` がない、または `.svg` だけが残っている場合も失敗する | 01 |
 | テスト ID の対応 | `e2e/*_test.go` とドキュメントのテスト仕様 | 実装済みのラベル（`<label>_test.go` があるもの）について、ドキュメントの表のテスト ID と、コードの `t.Run("<ID>"` が過不足なく一致すること。テスト ID を `go test -list` で列挙できないので、grep で突き合わせる。再現性確認で確かめる ID（fabric-10、fabric-11）は除く | 02 |
 | FRR の設定 | `frr/*.conf` | FRR のコンテナ内で `vtysh --dryrun -f` [F-2] | 02 |
-| kubeconform | Kubernetes マニフェスト | CRD スキーマ込みで検証する [T-5] | 03 |
-| helm template | Cilium の values | values が展開できること | 03 |
+| kubeconform | `cilium/` などの Kubernetes マニフェスト | `lint:kubeconform`。`kubeconform -strict` で、知らないフィールドも拒否する [T-5]。CRD のスキーマは、固定した版の CRD（Cilium は v1.20.4 のタグの `pkg/k8s/apis/cilium.io/client/crds/`）を取得し、`yq` で `openAPIV3Schema` を取り出して作る。`-strict` は入れ子のオブジェクトの知らないフィールドを拒否しないので、`properties` を持つオブジェクトに `additionalProperties: false` を付ける（kubeconform の openapi2jsonschema の strict モードと同じ）。置き場所は `.cache/kubeconform/`（git の対象外）。datreeio/CRDs-catalog は、どの版の CRD から作ったかが保証されないので使わない | 03 |
+| helm template | Cilium の values | `lint:helm`。3 クラスタ分の values で `helm template` が通ること。あわせて、values の各キーがチャートの既定の values（`helm show values`）にあること（既定が `{}` の map の下は除く）。チャートは知らないキーをエラーにしないので、消えたキーを書いても気づけないため（[cilium.md](cilium.md) 2.2） | 03 |
 | helm template | Envoy Gateway の values | 同上 | 06 |
+
+`lint:helm` と `lint:kubeconform` は、チャートと CRD を外部（helm.cilium.io、GitHub）から取得する。リンクチェックとは違い、固定した版を取るだけなので、外部のサイトの状態で結果は変わらない。
 
 `.yamllint.yaml` は `extends: default` にし、次の 2 つだけ変える。
 
@@ -188,7 +190,7 @@ action は pinact で commit SHA に固定し、バージョンをコメント�
 
 ## 6. 未確定事項
 
-- **kubeconform の CRD スキーマ:** datreeio/CRDs-catalog を commit で固定して使うか、固定した版の CRD からスキーマを生成するかを PR 03 で決める。固定した版の Cilium の CRD が catalog にない可能性があるため。
+- なし
 
 ---
 

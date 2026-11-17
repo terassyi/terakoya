@@ -56,6 +56,11 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | C-18 | [Gateway API Support（Cilium）](https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/) | 06 | Cilium 内蔵の Gateway API を無効にする理由（Envoy Gateway と競合させない）の確認 |
 | C-19 | [Multi-Cluster Services API（Cilium ClusterMesh）](https://docs.cilium.io/en/stable/network/clustermesh/mcsapi/) | 07 | 本ラボでは採らないが、CoreDNS の要件の参考になる。CoreDNS 1.12.2 以降が必要、Kubernetes 1.35 で既定で入る、`serviceimports` を list と watch する RBAC、Corefile への `clusterset.local` と `multicluster` の追加 |
 | C-20 | [Kubernetes Compatibility（v1.20）](https://docs.cilium.io/en/v1.20/network/kubernetes/compatibility/) | 01 | Cilium 1.20 が e2e で確かめている Kubernetes は 1.33〜1.36。Kubernetes のバージョン選定に使った |
+| C-21 | [cilium/cilium v1.20.4 `install/kubernetes/cilium/values.yaml`](https://github.com/cilium/cilium/blob/v1.20.4/install/kubernetes/cilium/values.yaml) | 03 | チャートの values のキーと既定値。`nodePort.enabled` と `nodePort.directRoutingDevice` がもうないこと。`values.schema.json` は知らないキーを拒否しない |
+| C-22 | [cilium/cilium v1.20.4 `pkg/k8s/apis/cilium.io/client/register.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/apis/cilium.io/client/register.go) | 03 | Cilium の CRD は operator が起動時に作る。`CiliumPodIPPool` の CRD は IPAM のモードによらず作られる |
+| C-23 | [cilium/cilium v1.20.4 `pkg/datapath/tables/direct_routing_device.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/datapath/tables/direct_routing_device.go) | 03 | direct routing device の決め方。指定がなく、選ばれたデバイスが 1 つならそれを使う |
+| C-24 | [cilium/cilium v1.20.4 `pkg/k8s/node.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/node.go) | 03 | `ParseCiliumNode` が multi-pool のブロックを `IPv4SecondaryAllocCIDRs` に入れ、`autoDirectNodeRoutes` の経路の対象になること |
+| C-25 | [Multi-Pool IPAM の手順（v1.20.4 `Documentation/network/kubernetes/ipam-multi-pool.rst`）](https://github.com/cilium/cilium/blob/v1.20.4/Documentation/network/kubernetes/ipam-multi-pool.rst) | 03 | Helm の設定例（`ipam.mode`、`kubeProxyReplacement`、`bpf.masquerade`）。agent はノードのブロックが割り当てられるまで待つ |
 
 ---
 
@@ -153,3 +158,4 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | T-9 | [yamllint](https://yamllint.readthedocs.io/) | 01 | `task lint` の YAML 検査。`extends: default` と規則の無効化 |
 | T-10 | [pinact](https://github.com/suzuki-shunsuke/pinact) | 01 | action を commit SHA に固定する。`--fix=false --no-api` によるオフラインの検査 |
 | T-11 | [actionlint](https://github.com/rhysd/actionlint) | 01 | `task lint` のワークフロー検査。shellcheck による `run:` の検査 |
+| T-12 | [agnhost（kubernetes `test/images/agnhost`）](https://github.com/kubernetes/kubernetes/tree/master/test/images/agnhost) | 03 | テスト用サーバ。`netexec` の `/clientip` で、サーバから見えた送信元を返す |
