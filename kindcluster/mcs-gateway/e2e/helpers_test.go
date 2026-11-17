@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os/exec"
 	"strings"
 	"testing"
@@ -146,4 +147,15 @@ func applyManifest(t *testing.T, cluster, manifest string) {
 			t.Logf("cleanup: %v", err)
 		}
 	})
+}
+
+// aRecords returns the IPv4 addresses in `dig +short` output, skipping CNAMEs.
+func aRecords(out []byte) []string {
+	var addrs []string
+	for _, l := range strings.Fields(string(out)) {
+		if a, err := netip.ParseAddr(l); err == nil && a.Is4() {
+			addrs = append(addrs, l)
+		}
+	}
+	return addrs
 }

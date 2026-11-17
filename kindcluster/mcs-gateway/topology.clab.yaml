@@ -137,6 +137,7 @@ topology:
         - ip addr replace 10.255.0.2/31 dev tor-core1
         - ip addr replace 10.255.0.4/31 dev tor-core2
         - ip addr replace 172.30.0.2/30 dev host0
+        - ip addr replace 10.255.0.6/31 dev dns0
         - sysctl -w net.ipv4.ip_forward=1
         - sysctl -w net.ipv4.fib_multipath_hash_policy=1
     # iptables for spine0 (the FRR image has none); shares spine0's netns.
@@ -205,6 +206,25 @@ topology:
         - sysctl -w net.ipv4.ip_forward=1
         - sysctl -w net.ipv4.fib_multipath_hash_policy=1
 
+    # --- DNS resolver of the fabric (docs/network.md 2.8) ---
+    # Same CoreDNS image as kindest/node. Upstream is docker's DNS via eth0 (mgmt).
+    dns0:
+      kind: linux
+      image: registry.k8s.io/coredns/coredns:v1.14.2
+      binds:
+        - dns/Corefile:/etc/coredns/Corefile:ro
+      cmd: -conf /etc/coredns/Corefile
+    # The CoreDNS image has no ip command; the sidecar holds the link and sets the address.
+    sc-dns0:
+      kind: linux
+      image: nicolaka/netshoot:v0.16
+      network-mode: container:dns0
+      cmd: sleep infinity
+      exec:
+        - ip addr replace 10.255.0.7/31 dev uplink
+        # Only the nodes go to spine0; the default route stays on eth0.
+        - ip route replace 10.69.0.0/16 via 10.255.0.6 dev uplink
+
     # --- host side of host0 (docs/network.md 2.5) ---
     # Runs in the host netns (containerlab linux nodes are privileged), so the host
     # address and routes are set without `sudo ip`. They go away with to-mcsgw on destroy.
@@ -244,6 +264,8 @@ topology:
     - endpoints: ["tor-core2:n1", "sc-core2-worker:node0"]
       mtu: 1500
     - endpoints: ["tor-core2:n2", "sc-core2-worker2:node0"]
+      mtu: 1500
+    - endpoints: ["spine0:dns0", "sc-dns0:uplink"]
       mtu: 1500
     - endpoints: ["spine0:host0", "host:to-mcsgw"]
       mtu: 1500

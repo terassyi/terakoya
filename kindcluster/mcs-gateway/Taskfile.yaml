@@ -4,6 +4,12 @@ version: "3"
 vars:
   # Versions not managed by aqua (docs/operations.md 2).
   YAMLLINT_VERSION: 1.38.0
+  CILIUM_VERSION: 1.20.4
+  # A chart URL, not "cilium --repo": helm would take the local cilium/ directory as the chart.
+  CILIUM_CHART: https://helm.cilium.io/cilium-{{.CILIUM_VERSION}}.tgz
+  # CRDs whose schemas lint:kubeconform builds, relative to the CRD directory of the tag (docs/testing.md 4.1).
+  CILIUM_CRDS: v2alpha1/ciliumpodippools.yaml
+  KUBECONFORM_CACHE: .cache/kubeconform
   D2_FLAGS: --layout elk --theme 0 --pad 24
   # Commands that must be on PATH (docs/operations.md 1, item 8).
   # HOST_COMMANDS come from the host. AQUA_COMMANDS maps every package in
@@ -116,7 +122,7 @@ tasks:
     cmds:
       - cmd: |
           rc=0
-          for t in lint:yaml lint:tools lint:actions lint:go lint:testids lint:frr lint:links lint:diagrams; do
+          for t in lint:yaml lint:tools lint:actions lint:go lint:testids lint:frr lint:helm lint:kubeconform lint:links lint:diagrams; do
             echo "==> $t"
             {{.TASK_EXE}} "$t" || { echo "FAILED: $t"; rc=1; }
           done
@@ -182,6 +188,56 @@ tasks:
           -v "$PWD/{{.ITEM}}:/tmp/frr.conf:ro"
           {{.FRR_IMAGE}} --dryrun -f /tmp/frr.conf
 
+  lint:helm:
+    # Render the Cilium chart, and fail on values keys the chart does not have (docs/cilium.md 2.2).
+    # The chart silently ignores unknown keys; keys under a map whose default is {} are free-form.
+    silent: true
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          defaults=$(helm show values {{.CILIUM_CHART}} | yq -o json)
+          rc=0
+          for c in {{.CLUSTERS}}; do
+            helm template cilium {{.CILIUM_CHART}} -n kube-system \
+              -f cilium/values/common.yaml -f cilium/values/$c.yaml >/dev/null || { echo "helm template failed: $c"; rc=1; }
+          done
+          for f in cilium/values/*.yaml; do
+            unknown=$(yq -o json '[.. | select(tag != "!!map" or length == 0) | path]' "$f" | jq -r --argjson d "$defaults" '
+              def known($o; $p):
+                ($p | length) == 0
+                or (($o | type) == "object" and ($o | has($p[0]))
+                    and (($o[$p[0]] | type == "object" and length == 0) or known($o[$p[0]]; $p[1:])));
+              .[] | select(known($d; .) | not) | map(tostring) | join(".")')
+            if [ -n "$unknown" ]; then echo "$f: keys not in the chart values:"; echo "$unknown"; rc=1; fi
+          done
+          exit $rc
+
+  lint:kubeconform:
+    # Validate manifests with schemas built from the pinned CRDs (docs/testing.md 4.1).
+    silent: true
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          dir={{.KUBECONFORM_CACHE}}/cilium-{{.CILIUM_VERSION}}
+          mkdir -p "$dir"
+          for crd in {{.CILIUM_CRDS}}; do
+            url=https://raw.githubusercontent.com/cilium/cilium/v{{.CILIUM_VERSION}}/pkg/k8s/apis/cilium.io/client/crds/$crd
+            y=$(curl -fsSL "$url")
+            kind=$(echo "$y" | yq '.spec.names.kind | downcase')
+            for v in $(echo "$y" | yq '.spec.versions[].name'); do
+              # kubeconform -strict does not reach nested objects; deny unknown fields in the schema
+              # itself, as openapi2jsonschema does in strict mode.
+              echo "$y" | yq -o json ".spec.versions[] | select(.name == \"$v\") | .schema.openAPIV3Schema" |
+                jq 'walk(if type == "object" and has("properties") and (has("additionalProperties") | not)
+                           and (has("x-kubernetes-preserve-unknown-fields") | not)
+                         then .additionalProperties = false else . end)' > "$dir/${kind}_$v.json"
+            done
+          done
+          kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location "$dir/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
+            cilium/ipam coredns
+
   lint:links:
     cmds:
       - lychee --offline --no-progress 'docs/**/*.md'
@@ -236,6 +292,8 @@ tasks:
     cmds:
       - task: check-host
       - task: deploy-fabric
+      - task: deploy-cilium
+      - task: deploy-coredns
 
   deploy-fabric:
     desc: containerlab, kind, FRR and the host link (docs/network.md 2.7)
@@ -276,6 +334,41 @@ tasks:
           done
       - for: {var: CLUSTERS, split: " "}
         cmd: kind export kubeconfig --name {{.ITEM}}
+
+  deploy-cilium:
+    desc: Cilium and the Pod IP pools (docs/cilium.md 2.1)
+    cmds:
+      - for: {var: CLUSTERS, split: " "}
+        cmd: |
+          set -euo pipefail
+          ctx=kind-{{.ITEM}}
+          helm upgrade --install cilium {{.CILIUM_CHART}} --kube-context $ctx -n kube-system \
+            -f cilium/values/common.yaml -f cilium/values/{{.ITEM}}.yaml
+          # The operator creates the CRDs; the agents are not ready until the pool exists.
+          for i in $(seq 120); do kubectl --context $ctx get crd ciliumpodippools.cilium.io >/dev/null 2>&1 && break; sleep 2; done
+          kubectl --context $ctx wait --for condition=established --timeout 60s crd/ciliumpodippools.cilium.io
+          kubectl --context $ctx apply -f cilium/ipam/{{.ITEM}}.yaml
+      - for: {var: CLUSTERS, split: " "}
+        cmd: |
+          set -euo pipefail
+          cilium status --wait --wait-duration 10m --context kind-{{.ITEM}} >/dev/null
+          kubectl --context kind-{{.ITEM}} wait --for condition=Ready --timeout 10m nodes --all
+
+  deploy-coredns:
+    desc: CoreDNS forwarding to dns0 (docs/cilium.md 2.4)
+    cmds:
+      # The reload plugin would pick up the change only after the kubelet syncs the volume (a minute
+      # or more). Roll the Pods on a Corefile change instead, so the new upstream is in effect when
+      # this task returns. The same hash patches nothing, so a second run does not restart CoreDNS.
+      - for: {var: CLUSTERS, split: " "}
+        cmd: |
+          set -euo pipefail
+          ctx=kind-{{.ITEM}}
+          kubectl --context $ctx apply --server-side --force-conflicts --field-manager mcsgw -f coredns/configmap.yaml
+          sum=$(sha256sum coredns/configmap.yaml | cut -c1-16)
+          kubectl --context $ctx -n kube-system patch deployment coredns \
+            -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"mcsgw/corefile-sha256\":\"$sum\"}}}}}"
+          kubectl --context $ctx -n kube-system rollout status deployment coredns --timeout 5m
 
   stop:
     desc: Destroy the lab and check that nothing is left (docs/operations.md 5)
