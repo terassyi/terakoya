@@ -1,0 +1,7 @@
+# Cilium values for cluster edge (docs/cilium.md 2.3).
+cluster:
+  name: edge
+  id: 1
+# Resolved by the docker DNS to the eth0 address of the control-plane.
+k8sServiceHost: edge-control-plane
+k8sServicePort: 6443

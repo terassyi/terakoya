@@ -98,6 +98,7 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 | `status` | トポロジ、BGP、クラスタの状態を一覧する | 本書 | 02 |
 | `deploy-fabric` | containerlab、kind、FRR、host 経路 | [network.md](network.md) | 02 |
 | `deploy-cilium` | Cilium と CiliumPodIPPool | [cilium.md](cilium.md) | 03 |
+| `deploy-coredns` | CoreDNS の Corefile（上流を `dns0` に向ける） | [cilium.md](cilium.md) 2.4 | 03 |
 | `deploy-bgp` | BGP と LB IPAM | [cilium.md](cilium.md) | 04 |
 | `deploy-dsr` | DSR / Maglev を有効にする | [cilium.md](cilium.md) | 05 |
 | `deploy-gateway` | Envoy Gateway と Gateway、HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | 06 |
@@ -119,12 +120,13 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
    - host の `to-mcsgw` の IP と経路は、containerlab の `host-mcsgw` ノードが設定する（[network.md](network.md) 2.5）。Taskfile は、それがあることを読んで確かめるだけ。
    - `kind export kubeconfig --name <cluster>` を 3 クラスタ分実行する。kube context は `kind-edge`、`kind-core1`、`kind-core2`。
 3. `deploy-cilium`
-4. `deploy-bgp`
-5. `deploy-dsr`
-6. `deploy-mcs`
-7. `deploy-sample`
-8. `sync-mcs`
-9. `deploy-gateway`
+4. `deploy-coredns`
+5. `deploy-bgp`
+6. `deploy-dsr`
+7. `deploy-mcs`
+8. `deploy-sample`
+9. `sync-mcs`
+10. `deploy-gateway`
 
 ---
 

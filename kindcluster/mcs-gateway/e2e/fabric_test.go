@@ -145,4 +145,14 @@ func TestFabric(t *testing.T) {
 			}
 		}
 	})
+
+	// Every node resolves names with the fabric resolver dns0 (docs/network.md 2.8).
+	t.Run("fabric-12", func(t *testing.T) {
+		for _, n := range labNodes() {
+			out, err := sidecarExec(n.name, "dig", "+short", "+time=5", "+tries=2", "@10.255.0.7", "registry.k8s.io")
+			if assert.NoError(t, err, n.name) {
+				assert.NotEmpty(t, aRecords(out), "%s: %q", n.name, out)
+			}
+		}
+	})
 }

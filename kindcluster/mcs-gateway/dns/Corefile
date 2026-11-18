@@ -1,0 +1,6 @@
+# Resolver of the fabric (docs/network.md 2.8). Upstream is docker's embedded DNS of this container.
+.:53 {
+    errors
+    forward . /etc/resolv.conf
+    cache 30
+}

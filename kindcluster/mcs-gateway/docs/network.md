@@ -178,6 +178,34 @@ containerlab の `deploy --reconfigure` は、ラボを destroy してから作�
 
 `task stop` は、containerlab の destroy（`--cleanup`。`to-mcsgw` とその経路も消える）に加えて、ユーザーの kubeconfig から `kind-edge`、`kind-core1`、`kind-core2` の context、cluster、user を消す。
 
+### 2.8 DNS リゾルバ（`dns0`）
+
+kind のノードの `/etc/resolv.conf` は docker の DNS（`172.18.0.1`）を指す。ノードの iptables が、この宛先を PREROUTING で docker の組み込み DNS（`127.0.0.11`）に DNAT する。CoreDNS はノードの設定を引き継ぐので、そのままでは Pod からの問い合わせも `172.18.0.1` に向かう。
+
+Cilium の BPF host routing は、Pod からの通信を netfilter に通さずに転送する。そのため DNAT が効かず、CoreDNS の上流への問い合わせがタイムアウトする（PR 03 の実装時に確かめた）。BPF host routing をやめる（`bpf.hostLegacyRouting: true`）と動くが、kind 特有の DNS の仕組みのためにデータパスを変えることになるので採らない（[cilium.md](cilium.md) 2.4）。
+
+代わりに、データセンターのリゾルバにあたるノード `dns0` をファブリックに置き、CoreDNS の上流をそこに向ける。
+
+- `dns0` は containerlab の linux ノードで、CoreDNS を動かす。イメージは kindest/node v1.36.4 に入っている CoreDNS と同じ `registry.k8s.io/coredns/coredns:v1.14.2`。設定は `dns/Corefile` を `binds` でマウントする。
+  ```
+  .:53 {
+      errors
+      forward . /etc/resolv.conf
+      cache 30
+  }
+  ```
+  - 上流は `dns0` 自身の `/etc/resolv.conf`、つまり docker の組み込み DNS。`dns0` は普通のコンテナなので、プロセスからの問い合わせは docker の DNAT（OUTPUT）を通って届く。host の DNS の設定（社内の DNS など）がそのまま使われる。
+  - 外への問い合わせは、containerlab の管理ネットワーク（`eth0`）から出る。spine の NAT は通らない。
+- CoreDNS のイメージには `ip` コマンドがないので、`dns0` と netns を共有する sidecar `sc-dns0`（`nicolaka/netshoot:v0.16`）の `exec` で、アドレスと経路を設定する。spine とのリンクは kind ノードと同じく sidecar に張る。
+  ```
+  ip addr replace 10.255.0.7/31 dev uplink
+  ip route replace 10.69.0.0/16 via 10.255.0.6 dev uplink   # ノード。デフォルト経路は eth0 のまま
+  ```
+- spine0 には `dns0` 向けの IF（`dns0`、10.255.0.6/31）を足す。ToR とノードは、デフォルト経路で spine を通って `dns0` に届く。
+- クラスタの CoreDNS は、Corefile の `forward` を `10.255.0.7` にする。Corefile はリポジトリの `coredns/` で管理する（[cilium.md](cilium.md) 2.4）。
+- Pod からの問い合わせ（CoreDNS の Pod が送る）は、Cilium の `ipv4NativeRoutingCIDR`（10.64.0.0/10）の外なので、node0 のアドレスに SNAT される。そのため `dns0` は、Pod の経路を知らなくても応答を返せる。
+- kubelet や containerd（イメージの pull）の名前解決は、ノードのホストの netns から docker の DNS を引く。netfilter を通るので、これまでどおり動く。
+
 ---
 
 ## 3. アドレス計画
@@ -201,6 +229,7 @@ containerlab の `deploy --reconfigure` は、ラボを destroy してから作�
 | spine0 ↔ tor-edge | 10.255.0.0/31 | .0 | .1 |
 | spine0 ↔ tor-core1 | 10.255.0.2/31 | .2 | .3 |
 | spine0 ↔ tor-core2 | 10.255.0.4/31 | .4 | .5 |
+| spine0 ↔ dns0 | 10.255.0.6/31 | .6 (`dns0`) | .7 (`uplink`。DNS リゾルバのアドレス) |
 | spine0 ↔ host | 172.30.0.0/30 | .2 (`host0`) | .1 (`to-mcsgw`) |
 
 ### 3.3 方針
@@ -221,9 +250,10 @@ containerlab の `deploy --reconfigure` は、ラボを destroy してから作�
 | kind ノードのコンテナ | `<cluster>-control-plane`, `<cluster>-worker`, `<cluster>-worker2` |
 | sidecar | `sc-<kind ノード名>`（例: `sc-edge-worker`）。spine の NAT 用は `nat-spine0` |
 | host を設定するノード | `host-mcsgw`（`network-mode: host`） |
+| DNS リゾルバ | `dns0`（sidecar は `sc-dns0`） |
 | ノード側の IF | `node0` |
 | ToR の IF | 上り `uplink`、ノード向け `n0`〜`n2`、bridge `br0` |
-| spine の IF | `tor-edge`, `tor-core1`, `tor-core2`, `host0` |
+| spine の IF | `tor-edge`, `tor-core1`, `tor-core2`, `host0`, `dns0` |
 | host の IF | `to-mcsgw` |
 
 ---
@@ -235,6 +265,7 @@ kindcluster/mcs-gateway/
 ├── .gitignore                  # clab-mcsgw/ と .topology.clab.yaml.bak（containerlab が作る）
 ├── topology.clab.yaml
 ├── kind/{edge,core1,core2}.kind.yaml
+├── dns/Corefile                # dns0 の CoreDNS（2.8）
 └── frr/
     ├── daemons                 # 全ルータ共通（bgpd=yes）
     ├── vtysh.conf              # 全ルータ共通
@@ -260,8 +291,9 @@ Taskfile のタスク: `deploy-fabric`、`start`、`stop`、`status`。`task lin
 | fabric-07 | host からノードへの到達性 | host から各ノードの node0 IP へ `ping` | 成功する |
 | fabric-08 | Node の INTERNAL-IP | `kubectl get node -o json`（3 コンテキスト） | 3 章の IP になっている |
 | fabric-09 | ノードから外への到達性 | sidecar で、各クラスタの 1 ノードから `curl -sS -o /dev/null -w '%{http_code}' https://registry.k8s.io/v2/` | HTTP の応答が返る（ステータスは問わない）。イメージの pull が spine の NAT を通って外に出られることの確認 |
-| fabric-10 | 冪等性 | `task start` を 2 回実行する | 2 回目は containerlab の deploy を飛ばして成功し、fabric-01〜fabric-09 が成り立つ |
+| fabric-10 | 冪等性 | `task start` を 2 回実行する | 2 回目は containerlab の deploy を飛ばして成功し、fabric-01〜fabric-09 と fabric-12 が成り立つ |
 | fabric-11 | 後片付け | `task stop` の後に `docker ps -a`、`ip link`、`ip route`、`kubectl config get-contexts` を見る | `clab-mcsgw-*`、kind ノード、`to-mcsgw`、追加した経路、`kind-edge` などの context が残っていない |
+| fabric-12 | ノードから DNS リゾルバ | sidecar で、全ノードから `dig +short @10.255.0.7 registry.k8s.io` | A レコードが返る |
 
 fabric-10 と fabric-11 は Go のテストではなく、[development.md](development.md) の再現性確認の手順で確かめる。
 
