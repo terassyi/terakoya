@@ -129,6 +129,26 @@ func TestBGP(t *testing.T) {
 		}
 		vips[c] = waitLBIP(t, c, bgpTestNS, "agnhost")
 	}
+	// deploy-bgp does not wait for the routes. Wait here, so that each subtest can also run alone
+	// (task test ID=...); bgp-01..03 check the details of the routes.
+	var prefixes []string
+	for _, c := range clusters {
+		for _, blocks := range nodeBlocks(t, c, "routable") {
+			prefixes = append(prefixes, blocks...)
+		}
+		prefixes = append(prefixes, vips[c]+"/32")
+	}
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		for _, r := range []string{"spine0", "tor-edge", "tor-core1", "tor-core2"} {
+			routes, err := bgpRoutes(r)
+			if !assert.NoError(ct, err) {
+				return
+			}
+			for _, p := range prefixes {
+				assert.NotEmpty(ct, activeNexthops(routes[p]), "%s %s", r, p)
+			}
+		}
+	}, eventuallyTimeout, eventuallyTick)
 
 	// Every node of a cluster has a session with its ToR.
 	t.Run("bgp-01", func(t *testing.T) {
@@ -219,15 +239,19 @@ func TestBGP(t *testing.T) {
 	// core routable Pods do not open connections to edge or to the other core.
 	t.Run("bgp-05", func(t *testing.T) {
 		for _, p := range [][2]string{{"core1", "edge"}, {"core1", "core2"}, {"core2", "edge"}, {"core2", "core1"}} {
-			_, err := podCurl(p[0], bgpTestNS, fmt.Sprintf("http://%s:8080/clientip", pods[p[1]][bgpTestNS+"/agnhost"]))
-			assertRejected(t, err, "%s -> %s", p[0], p[1])
+			assertRejected(t, func() error {
+				_, err := podCurl(p[0], bgpTestNS, fmt.Sprintf("http://%s:8080/clientip", pods[p[1]][bgpTestNS+"/agnhost"]))
+				return err
+			}, "%s -> %s", p[0], p[1])
 		}
 	})
 
 	// default Pods do not reach Pods of other clusters (SNATed to the node, then rejected).
 	t.Run("bgp-06", func(t *testing.T) {
-		_, err := podCurl("edge", bgpDefaultNS, fmt.Sprintf("http://%s:8080/clientip", pods["core1"][bgpTestNS+"/agnhost"]))
-		assertRejected(t, err)
+		assertRejected(t, func() error {
+			_, err := podCurl("edge", bgpDefaultNS, fmt.Sprintf("http://%s:8080/clientip", pods["core1"][bgpTestNS+"/agnhost"]))
+			return err
+		})
 	})
 
 	// L4LB between all clusters, from both pools.
@@ -248,11 +272,14 @@ func TestBGP(t *testing.T) {
 	// The host reaches the edge VIP only.
 	t.Run("bgp-08", func(t *testing.T) {
 		for _, c := range clusters {
-			_, err := hostCurl("-sS", "--max-time", "10", fmt.Sprintf("http://%s/clientip", vips[c]))
+			curl := func() error {
+				_, err := hostCurl("-sS", "--max-time", "10", fmt.Sprintf("http://%s/clientip", vips[c]))
+				return err
+			}
 			if c == "edge" {
-				assert.NoError(t, err, c)
+				assert.NoError(t, curl(), c)
 			} else {
-				assertRejected(t, err, c)
+				assertRejected(t, curl, c)
 			}
 		}
 	})

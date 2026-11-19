@@ -413,8 +413,13 @@ cilium-02 から cilium-11 は 3 クラスタすべてで確かめる。テス�
 | `bgp-default` | `default` | netshoot |
 
 - 期待値は、テストの中でクラスタから読む（ブロックは `CiliumNode`、VIP は Service の `status.loadBalancer.ingress`、ノードのアドレスは [network.md](network.md) 3 章）。
-- 経路を見るテスト（bgp-01〜03、bgp-09）は `EventuallyWithT` で収束を待つ。`deploy-bgp` は収束を待たないため。
-- 「拒否される」は、spine0 の REJECT（ICMP admin prohibited）で、`curl` がタイムアウトを待たずに失敗することを確かめる（[network.md](network.md) 2.9）。
+- `deploy-bgp` は経路の収束を待たない。
+  - そのため、共通の準備処理で、全ルーター（spine0 と 3 台の ToR）が全クラスタの `routable` のブロックと VIP の経路を持つまで待つ。
+  - これで、通信のテスト（bgp-04〜08）も `task test ID=...` で単独で流せる（[testing.md](testing.md) 3.6）。
+  - 経路を見るテスト（bgp-01〜03、bgp-09）も、それぞれ `EventuallyWithT` で待つ。
+- 「拒否される」は、次の 2 つの両方で確かめる（[network.md](network.md) 2.9）。
+  - spine0 の REJECT（ICMP admin prohibited）で、`curl` がタイムアウトを待たずに失敗する（終了コード 7）。
+  - spine0 の REJECT ルールのパケットカウンタ（`iptables-save -c`）が、`curl` の前後で増える。終了コード 7 は、相手のポートが閉じているときにも返るため。
 
 | # | 確かめること | 観測方法 | 期待値 |
 |---|---|---|---|

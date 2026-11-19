@@ -211,12 +211,39 @@ func poolCIDR(t *testing.T, cluster, pool string) netip.Prefix {
 // ("exit status") and kubectl exec ("exit code").
 var curlRejected = regexp.MustCompile(`exit (status|code) 7\b`)
 
-// assertRejected checks that a curl was rejected by the spine0 ACL (docs/network.md 2.9).
-func assertRejected(t assert.TestingT, err error, msgAndArgs ...any) bool {
-	if !assert.Error(t, err, msgAndArgs...) {
-		return false
+// spineRejectRule is the final rule of the spine0 ACL (iptables/spine0.rules) as iptables-save prints it.
+const spineRejectRule = "-A FORWARD -j REJECT --reject-with icmp-admin-prohibited"
+
+// spineRejects returns the packet count of the final REJECT rule of the spine0 ACL.
+func spineRejects() (uint64, error) {
+	out, err := spineExec("iptables-save", "-c", "-t", "filter")
+	if err != nil {
+		return 0, err
 	}
-	return assert.Regexp(t, curlRejected, err.Error(), msgAndArgs...)
+	for _, l := range strings.Split(string(out), "\n") {
+		if strings.HasSuffix(l, "] "+spineRejectRule) {
+			var pkts, bytes uint64
+			if _, err := fmt.Sscanf(l, "[%d:%d]", &pkts, &bytes); err != nil {
+				return 0, fmt.Errorf("parse %q: %w", l, err)
+			}
+			return pkts, nil
+		}
+	}
+	return 0, fmt.Errorf("rule %q not found in spine0", spineRejectRule)
+}
+
+// assertRejected checks that a curl run by try was rejected by the spine0 ACL (docs/network.md 2.9):
+// curl fails at once (exit code 7), and the REJECT rule of spine0 counts it. Exit code 7 alone
+// also matches other failures, such as a closed port.
+func assertRejected(t *testing.T, try func() error, msgAndArgs ...any) bool {
+	t.Helper()
+	before, err := spineRejects()
+	require.NoError(t, err)
+	curlErr := try()
+	after, err := spineRejects()
+	require.NoError(t, err)
+	ok := assert.Error(t, curlErr, msgAndArgs...) && assert.Regexp(t, curlRejected, curlErr.Error(), msgAndArgs...)
+	return assert.Greater(t, after, before, msgAndArgs...) && ok
 }
 
 // ipRoute is an entry of FRR `show ip route ... json`.
