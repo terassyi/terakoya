@@ -49,6 +49,7 @@
   task stop             # 人
   ```
   2 回目の `task start` と `task test` で冪等性を、最後の `task stop` で残骸が残らないことを確かめる。人が実行した手順のログも PR 説明に貼る。
+  - PR 04 以降は、2 回目の `task start` の前後で、cilium の DaemonSet と cilium-operator の Deployment の `metadata.generation` が変わらないことも確かめる。`rollOutCiliumPods` で、設定が変わらなければ agent を作り直さないことの確認（[cilium.md](cilium.md) 2.2）。
 - 既存のテストも含めてすべて green であること（回帰がないこと）。
 - `task lint` と CI が green であること。
 - ドキュメントのステータスを `Implemented` にする。ドキュメントと実装が一致していることを、最後にもう一度確かめる。

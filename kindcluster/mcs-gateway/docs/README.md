@@ -23,7 +23,7 @@ kind クラスタ 3 つ（L7LB 用の **edge** × 1、アプリ用の **core** �
 ### Goals
 
 1. 3 つの kind クラスタ（edge、core1、core2）と FRR の spine/ToR を、1 つのコマンド（`task start`）で containerlab 上に冪等に構築できる。
-2. 全クラスタで Cilium の KPR、DSR（Geneve）、Maglev、multi-pool IPAM、BGP CP v2 が動く。Pod CIDR と LB VIP が BGP で広報され、クラスタ間でトンネルなしの Pod-to-Pod 通信ができる。
+2. 全クラスタで Cilium の KPR、DSR（Geneve）、Maglev、multi-pool IPAM、BGP CP v2 が動く。クラスタ間で使うプール（`routable`）のブロックと LB VIP が BGP で広報され、edge の `routable` の Pod から core の `routable` の Pod へ、トンネルなしで通信できる。クラスタ間で通してよい通信は、プールと spine の ACL で決める（L4LB の VIP は全クラスタのメッシュ、外部からは edge だけ）。
 3. edge の Envoy Gateway が LB VIP で外部（host）からの HTTP を受け、MCS の `ServiceImport` 経由で core1/core2 の Pod へ振り分ける。
 4. 各コンポーネントに自動テスト（`task test`）がある。Goal が満たされたことを機械的に判定できる。
 5. 各段階を stacked PR として独立にレビューとマージができる。

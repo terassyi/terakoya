@@ -12,6 +12,9 @@ containerlab のトポロジ 1 つ（lab 名 `mcsgw`）の中に、次のもの�
 - FRR の spine 1 台（`spine0`）と ToR 3 台（`tor-edge`、`tor-core1`、`tor-core2`）
 - 各 kind ノードの sidecar と、spine の NAT 用の sidecar（`nat-spine0`）
 - host への veth と、host 側の IP と経路を設定するコンテナ（`host-mcsgw`）
+- DNS リゾルバ `dns0`（2.8）
+
+spine0 を外部（host）とクラスタ間の境界とみなし、通す通信を ACL で絞る（2.9。PR 04）。
 
 ネットワークは spine/ToR の 2 段で、全区間を eBGP でつなぐ。1 クラスタに 1 ToR を割り当て、クラスタ内のノードは ToR の L2 bridge（`br0`）にぶら下がる。
 
@@ -98,8 +101,12 @@ nodes:
   - ノードのデフォルト経路は node0 を向くので、外向きの通信（イメージの pull を含む）は spine を通る。spine の `eth0` で、ノードのアドレスを MASQUERADE する。
     ```
     iptables -t nat -A POSTROUTING -s 10.69.0.0/16 -o eth0 -j MASQUERADE
+    iptables -t nat -A POSTROUTING -s 10.100.128.0/17 -o eth0 -j MASQUERADE   # 04: routable の Pod
+    iptables -t nat -A POSTROUTING -s 10.101.128.0/17 -o eth0 -j MASQUERADE
+    iptables -t nat -A POSTROUTING -s 10.102.128.0/17 -o eth0 -j MASQUERADE
     ```
-    - Pod から外への通信は、Cilium がノードで SNAT する（[cilium.md](cilium.md) の `bpf.masquerade`）ので、spine に Pod のアドレスの規則は要らない。
+    - `default` プールの Pod から外への通信は、Cilium がノードで node0 のアドレスに SNAT する（[cilium.md](cilium.md) の `bpf.masquerade`）。
+    - `routable` プールの Pod は、ノードで SNAT されない（[cilium.md](cilium.md) 3 章の `skip-masquerade`）。そのため、外への通信は spine で SNAT する（PR 04）。
   - FRR のイメージには iptables がない。そのため、spine と netns を共有する sidecar（`nat-spine0`、`nicolaka/netshoot:v0.16`）の `exec` で MASQUERADE を設定する。独自のイメージは作らない。
 - 全ルータで `net.ipv4.ip_forward=1` を `exec` で明示する。
 
@@ -203,8 +210,58 @@ Cilium の BPF host routing は、Pod からの通信を netfilter に通さず�
   ```
 - spine0 には `dns0` 向けの IF（`dns0`、10.255.0.6/31）を足す。ToR とノードは、デフォルト経路で spine を通って `dns0` に届く。
 - クラスタの CoreDNS は、Corefile の `forward` を `10.255.0.7` にする。Corefile はリポジトリの `coredns/` で管理する（[cilium.md](cilium.md) 2.4）。
-- Pod からの問い合わせ（CoreDNS の Pod が送る）は、Cilium の `ipv4NativeRoutingCIDR`（10.64.0.0/10）の外なので、node0 のアドレスに SNAT される。そのため `dns0` は、Pod の経路を知らなくても応答を返せる。
+- Pod からの問い合わせ（CoreDNS の Pod が送る）は、Cilium の `ipv4NativeRoutingCIDR`（自クラスタの Pod の /16）の外なので、node0 のアドレスに SNAT される。そのため `dns0` は、Pod の経路を知らなくても応答を返せる。
 - kubelet や containerd（イメージの pull）の名前解決は、ノードのホストの netns から docker の DNS を引く。netfilter を通るので、これまでどおり動く。
+
+### 2.9 通信ポリシー（spine0 の ACL。PR 04）
+
+spine0 は、外部（host）、インターネット、クラスタ間の通信がすべて通る境界にあたる。ここで、通してよい通信だけを許可する。
+
+| 送信元 → 宛先 | 扱い | 理由 |
+|---|---|---|
+| host → edge の LB VIP（10.80.0.0/24）、edge のノード（10.69.0.0/24） | 許可 | 外部の入口は edge だけ |
+| host → core（ノード、VIP） | 拒否 | core へは edge の Gateway を経由する（[envoy-gateway.md](envoy-gateway.md)） |
+| ノード → インターネット、ノード → `dns0` | 許可 | イメージの pull、`default` の Pod の外への通信（ノードで SNAT 済み）、DNS |
+| `routable` の Pod → インターネット | 許可 | spine で SNAT する（2.3） |
+| クラスタ間の LB VIP（10.80.0.0/14） | 許可 | L4LB は全クラスタのメッシュで通す。送信元は `routable` の Pod か、ノード（`default` の Pod はノードで SNAT される） |
+| edge の `routable` → core の `routable` | 許可 | edge の Envoy から core のバックエンドへ（MCS の経路） |
+| core の `routable` → edge の `routable` | 拒否 | 新しい接続は edge からだけ。core から edge へは VIP で届く |
+| core1 ↔ core2 の `routable` | 拒否 | core どうしは VIP だけ |
+| ノード → 別クラスタのノード | 拒否 | 使う通信がない |
+| `default` プールのアドレスが絡むもの | 拒否（経路もない） | `default` はクラスタの中に閉じる（3.3） |
+| 上で許可した通信の応答 | 許可 | conntrack（`ESTABLISHED,RELATED`）。ICMP のエラー（frag-needed など）も含む |
+
+- アドレスで判断できるのは、`routable` プールの Pod が SNAT されず（送信元が Pod IP のまま）、`default` プールの Pod がクラスタの外に出るときにノードのアドレスに SNAT されるため（[cilium.md](cilium.md) 3 章）。
+- spine は 1 台で、行きと帰りが必ず同じ spine を通る。そのため conntrack で応答を許可できる。
+- 規則は `iptables/spine0.rules`（`iptables-restore` の形式。filter テーブルだけ）に書き、`nat-spine0` に `binds` でマウントして `exec` で `iptables-restore` する。ファイルがそのまま望ましい状態になる。
+  ```
+  *filter
+  :INPUT ACCEPT [0:0]
+  :FORWARD DROP [0:0]
+  :OUTPUT ACCEPT [0:0]
+  -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  # ノードから外と dns0
+  -A FORWARD -s 10.69.0.0/16 -o eth0 -j ACCEPT
+  -A FORWARD -s 10.69.0.0/16 -o dns0 -j ACCEPT
+  # routable の Pod から外（2.3 の NAT）
+  -A FORWARD -s 10.100.128.0/17 -o eth0 -j ACCEPT
+  -A FORWARD -s 10.101.128.0/17 -o eth0 -j ACCEPT
+  -A FORWARD -s 10.102.128.0/17 -o eth0 -j ACCEPT
+  # host から edge
+  -A FORWARD -i host0 -d 10.80.0.0/24 -j ACCEPT
+  -A FORWARD -i host0 -d 10.69.0.0/24 -j ACCEPT
+  # クラスタ間の L4LB（全クラスタのメッシュ）
+  -A FORWARD -i tor-+ -o tor-+ -d 10.80.0.0/14 -j ACCEPT
+  # edge の routable から core の routable
+  -A FORWARD -s 10.100.128.0/17 -d 10.101.128.0/17 -j ACCEPT
+  -A FORWARD -s 10.100.128.0/17 -d 10.102.128.0/17 -j ACCEPT
+  -A FORWARD -j REJECT --reject-with icmp-admin-prohibited
+  COMMIT
+  ```
+  - `iptables-restore` は、ファイルにあるテーブル（filter）だけを置き換える。NAT（2.3）は nat テーブルにあり、docker が作るコンテナ内の DNS の規則（`DOCKER_OUTPUT` など）も nat テーブルにあるので、nat はファイルに含めず、これまでどおり `exec` で足す。
+  - 最後の行は DROP ではなく REJECT にする。止めた通信がすぐに失敗するので、「届かないこと」を確かめるテストがタイムアウトを待たない。
+- spine0 自身が出す通信（OUTPUT）と、spine0 宛ての通信（INPUT。BGP、host からの ping）は対象外。テストでは、ファブリックの内側から観測する場所として `nat-spine0` を使う。
+- ACL は L3/L4 の境界の制御で、Kubernetes の NetworkPolicy の代わりではない。クラスタの中の通信は制御しない。
 
 ---
 
@@ -216,7 +273,9 @@ Cilium の BPF host routing は、Pod からの通信を netfilter に通さず�
 |---|---|---|---|
 | Node（ToR br0, GW .1） | 10.69.0.0/24 | 10.69.1.0/24 | 10.69.2.0/24 |
 | control-plane / worker / worker2 | .11 / .12 / .13 | .11 / .12 / .13 | .11 / .12 / .13 |
-| Pod（CiliumPodIPPool `default`） | 10.100.0.0/16 | 10.101.0.0/16 | 10.102.0.0/16 |
+| Pod（クラスタの集約。`ipv4NativeRoutingCIDR`） | 10.100.0.0/16 | 10.101.0.0/16 | 10.102.0.0/16 |
+| Pod（CiliumPodIPPool `default`。クラスタ内） | 10.100.0.0/17 | 10.101.0.0/17 | 10.102.0.0/17 |
+| Pod（CiliumPodIPPool `routable`。クラスタ間） | 10.100.128.0/17 | 10.101.128.0/17 | 10.102.128.0/17 |
 | Service（kind serviceSubnet） | 10.110.0.0/16 | 10.111.0.0/16 | 10.112.0.0/16 |
 | LB IPAM pool | 10.80.0.0/24 | 10.81.0.0/24 | 10.82.0.0/24 |
 | Cilium ASN（ノード） | 65101 | 65201 | 65301 |
@@ -236,6 +295,11 @@ Cilium の BPF host routing は、Pod からの通信を netfilter に通さず�
 
 - **Pod CIDR と Service CIDR はクラスタ間で重ならないようにする。** MCS のフラットな L3 到達はこの前提に依存する。
 - kind の `podSubnet` は IPAM には使わない（Pod IP は Cilium の multi-pool IPAM が払い出す）。混乱しないよう、CiliumPodIPPool と同じ値をそろえて書く。
+- **Pod のアドレスは、クラスタごとの /16 を 2 つのプールに分ける。**（PR 04）
+  - `default`（前半の /17）: クラスタの中だけで使う。BGP で広報しないので、クラスタの外からの経路がない。クラスタの外に出る通信は、ノードで node0 のアドレスに SNAT される。
+  - `routable`（後半の /17）: クラスタ間で使う（edge の L7LB の Pod と、そのバックエンド）。BGP で広報し、SNAT しない。どの Pod がこのプールを使うかは、プールの `namespaceSelector` で決める（[cilium.md](cilium.md) 3 章）。
+  - クラスタの /16 を 1 つの CIDR にまとめるのは、Cilium の `ipv4NativeRoutingCIDR` に CIDR を 1 つしか書けないため。自クラスタの両方のプールを含み、他クラスタを含まない CIDR にする。
+  - `default` もクラスタ間で重ならないようにする。重なると、別クラスタから来た通信の送信元を、自クラスタの Pod と区別できない。
 - 追加の Pod プールは、`10.103.0.0/16` 以降から取る。
 
 ---
@@ -266,13 +330,14 @@ kindcluster/mcs-gateway/
 ├── topology.clab.yaml
 ├── kind/{edge,core1,core2}.kind.yaml
 ├── dns/Corefile                # dns0 の CoreDNS（2.8）
+├── iptables/spine0.rules       # spine0 の ACL（2.9。PR 04）
 └── frr/
     ├── daemons                 # 全ルータ共通（bgpd=yes）
     ├── vtysh.conf              # 全ルータ共通
     └── {spine0,tor-edge,tor-core1,tor-core2}.conf
 ```
 
-Taskfile のタスク: `deploy-fabric`、`start`、`stop`、`status`。`task lint` に FRR の設定の検査（`vtysh --dryrun`）を足す（[testing.md](testing.md) 4.1）。
+Taskfile のタスク: `deploy-fabric`、`start`、`stop`、`status`。`task lint` に FRR の設定の検査（`vtysh --dryrun`）を足す。PR 04 で、ACL の構文の検査（`iptables-restore --test`）を足す（[testing.md](testing.md) 4.1）。
 
 ---
 
@@ -286,14 +351,15 @@ Taskfile のタスク: `deploy-fabric`、`start`、`stop`、`status`。`task lin
 | fabric-02 | ノードの node0 | 各ノードで `ip -j addr show node0` | 3 章の IP が付いている |
 | fabric-03 | ノードのデフォルト経路 | 各ノードで `ip -j route show default` | via が ToR GW、dev が `node0` |
 | fabric-04 | ノードから GW への到達性 | sidecar で、各ノードから ToR GW へ `ping` | 成功する |
-| fabric-05 | クラスタ間のノード到達性 | sidecar で、edge-worker から core1-worker、core2-worker の node0 IP へ `ping` | 成功する（spine 経由） |
+| fabric-05 | spine から全ノードへの到達性 | `nat-spine0` で、各ノードの node0 IP へ `ping` | すべて成功する（ToR の経路。PR 04 で、ノードどうしの観測から spine からの観測に変えた） |
 | fabric-06 | host から spine への到達性 | host から 172.30.0.2 へ `ping` | 成功する |
-| fabric-07 | host からノードへの到達性 | host から各ノードの node0 IP へ `ping` | 成功する |
+| fabric-07 | host からノードへの到達性 | host から各ノードの node0 IP へ `ping` | edge のノードには届く。core のノードは拒否される（ICMP admin prohibited。2.9） |
 | fabric-08 | Node の INTERNAL-IP | `kubectl get node -o json`（3 コンテキスト） | 3 章の IP になっている |
 | fabric-09 | ノードから外への到達性 | sidecar で、各クラスタの 1 ノードから `curl -sS -o /dev/null -w '%{http_code}' https://registry.k8s.io/v2/` | HTTP の応答が返る（ステータスは問わない）。イメージの pull が spine の NAT を通って外に出られることの確認 |
-| fabric-10 | 冪等性 | `task start` を 2 回実行する | 2 回目は containerlab の deploy を飛ばして成功し、fabric-01〜fabric-09 と fabric-12 が成り立つ |
+| fabric-10 | 冪等性 | `task start` を 2 回実行する | 2 回目は containerlab の deploy を飛ばして成功し、fabric-01〜fabric-09、fabric-12、fabric-13 が成り立つ |
 | fabric-11 | 後片付け | `task stop` の後に `docker ps -a`、`ip link`、`ip route`、`kubectl config get-contexts` を見る | `clab-mcsgw-*`、kind ノード、`to-mcsgw`、追加した経路、`kind-edge` などの context が残っていない |
 | fabric-12 | ノードから DNS リゾルバ | sidecar で、全ノードから `dig +short @10.255.0.7 registry.k8s.io` | A レコードが返る |
+| fabric-13 | 別クラスタのノードへは届かない | sidecar で、edge-worker から core1-worker へ、core1-worker から core2-worker へ `ping` | 拒否される（2.9） |
 
 fabric-10 と fabric-11 は Go のテストではなく、[development.md](development.md) の再現性確認の手順で確かめる。
 

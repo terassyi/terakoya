@@ -3,7 +3,7 @@
 mcs-gateway の設計と実装で参照する文献の一覧。
 
 - 各コンポーネントのドキュメントからは、ここの ID（例: `[C-4]`）で参照する。読んで確かめたことは、参照する側のドキュメントの本文に書く。
-- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11、L-10、L-11、K-4 は 2026-11-06 に追加・確認）。
+- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11、L-10、L-11、K-4 は 2026-11-06 に追加・確認。C-26〜C-31 は 2026-11-18 に追加・確認）。
 - docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.20/`）。
 - 新しく文献を見つけたら、該当するカテゴリに追記する。
 
@@ -56,11 +56,17 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | C-18 | [Gateway API Support（Cilium）](https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/) | 06 | Cilium 内蔵の Gateway API を無効にする理由（Envoy Gateway と競合させない）の確認 |
 | C-19 | [Multi-Cluster Services API（Cilium ClusterMesh）](https://docs.cilium.io/en/stable/network/clustermesh/mcsapi/) | 07 | 本ラボでは採らないが、CoreDNS の要件の参考になる。CoreDNS 1.12.2 以降が必要、Kubernetes 1.35 で既定で入る、`serviceimports` を list と watch する RBAC、Corefile への `clusterset.local` と `multicluster` の追加 |
 | C-20 | [Kubernetes Compatibility（v1.20）](https://docs.cilium.io/en/v1.20/network/kubernetes/compatibility/) | 01 | Cilium 1.20 が e2e で確かめている Kubernetes は 1.33〜1.36。Kubernetes のバージョン選定に使った |
-| C-21 | [cilium/cilium v1.20.4 `install/kubernetes/cilium/values.yaml`](https://github.com/cilium/cilium/blob/v1.20.4/install/kubernetes/cilium/values.yaml) | 03 | チャートの values のキーと既定値。`nodePort.enabled` と `nodePort.directRoutingDevice` がもうないこと。`values.schema.json` は知らないキーを拒否しない |
+| C-21 | [cilium/cilium v1.20.4 `install/kubernetes/cilium/values.yaml`](https://github.com/cilium/cilium/blob/v1.20.4/install/kubernetes/cilium/values.yaml) | 03, 04 | チャートの values のキーと既定値。`nodePort.enabled` と `nodePort.directRoutingDevice` がもうないこと。`values.schema.json` は知らないキーを拒否しない。`enableLBIPAM: true`、`rollOutCiliumPods` と `operator.rollOutPods`（既定 `false`）、`bgpControlPlane.routerIDAllocation` |
 | C-22 | [cilium/cilium v1.20.4 `pkg/k8s/apis/cilium.io/client/register.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/apis/cilium.io/client/register.go) | 03 | Cilium の CRD は operator が起動時に作る。`CiliumPodIPPool` の CRD は IPAM のモードによらず作られる |
 | C-23 | [cilium/cilium v1.20.4 `pkg/datapath/tables/direct_routing_device.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/datapath/tables/direct_routing_device.go) | 03 | direct routing device の決め方。指定がなく、選ばれたデバイスが 1 つならそれを使う |
 | C-24 | [cilium/cilium v1.20.4 `pkg/k8s/node.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/node.go) | 03 | `ParseCiliumNode` が multi-pool のブロックを `IPv4SecondaryAllocCIDRs` に入れ、`autoDirectNodeRoutes` の経路の対象になること |
 | C-25 | [Multi-Pool IPAM の手順（v1.20.4 `Documentation/network/kubernetes/ipam-multi-pool.rst`）](https://github.com/cilium/cilium/blob/v1.20.4/Documentation/network/kubernetes/ipam-multi-pool.rst) | 03 | Helm の設定例（`ipam.mode`、`kubeProxyReplacement`、`bpf.masquerade`）。agent はノードのブロックが割り当てられるまで待つ |
+| C-26 | [cilium/cilium v1.20.4 `pkg/k8s/synced/crd.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/synced/crd.go) | 04 | operator が作る CRD の一覧。BGP の CRD は `bgpControlPlane.enabled` のときだけ作られ、`CiliumLoadBalancerIPPool` はいつも作られる |
+| C-27 | [cilium/cilium v1.20.4 `pkg/bgp/manager/reconciler/pod_ip_pool.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/bgp/manager/reconciler/pod_ip_pool.go) | 04 | `CiliumPodIPPool` の広報。自ノードの `CiliumNode` に割り当てられたブロックのうち、selector に合うプールのものだけを広報する |
+| C-28 | [cilium/cilium v1.20.4 `pkg/k8s/apis/cilium.io/v2/bgp_cluster_types.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/k8s/apis/cilium.io/v2/bgp_cluster_types.go) | 04 | `CiliumBGPClusterConfig` の型。`peerAddress`、`peerASN`、`autoDiscovery`（`DefaultGateway`）。BGP の API は `cilium.io/v2` |
+| C-29 | [Multi-Pool IPAM の概念（v1.20.4 `Documentation/network/concepts/ipam/multi-pool.rst`）](https://github.com/cilium/cilium/blob/v1.20.4/Documentation/network/concepts/ipam/multi-pool.rst) | 04 | プールの選び方（`ipam.cilium.io/ip-pool` のアノテーション、プールの `namespaceSelector` / `podSelector`、合わなければ `default`）。Masquerade Behaviour（`skip-masquerade`、`--only-masquerade-default-pool`） |
+| C-30 | [cilium/cilium v1.20.4 `bpf/lib/nat.h`](https://github.com/cilium/cilium/blob/v1.20.4/bpf/lib/nat.h) | 04 | `snat_v4_needs_masquerade` の判定順（`ipv4NativeRoutingCIDR`、プールの skip-masquerade、ip-masq-agent、リモートノード） |
+| C-31 | [cilium/cilium v1.20.4 `pkg/ipam/multipool.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/ipam/multipool.go) | 04 | `shouldSkipMasqForPool`。プールのアノテーション `ipam.cilium.io/skip-masquerade: "true"` で、そのプールの Pod を SNAT しない |
 
 ---
 
