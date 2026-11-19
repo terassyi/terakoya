@@ -1,0 +1,15 @@
+# BGP instance of cluster core2: every node peers with tor-core2 (docs/cilium.md 4.2).
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: tor
+spec:
+  bgpInstances:
+    - name: tor
+      localASN: 65301
+      peers:
+        - name: tor-core2
+          peerASN: 65300
+          peerAddress: 10.69.2.1
+          peerConfigRef:
+            name: tor

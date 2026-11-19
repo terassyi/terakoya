@@ -9,6 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// assertPingRejected checks that a ping was answered by the ICMP admin prohibited of the spine0
+// ACL (docs/network.md 2.9), not lost.
+func assertPingRejected(t *testing.T, out []byte, err error, msgAndArgs ...any) {
+	t.Helper()
+	if assert.Error(t, err, msgAndArgs...) {
+		assert.Contains(t, string(out), "Packet filtered", msgAndArgs...)
+	}
+}
+
 // TestFabric checks the containerlab fabric (docs/network.md 6).
 // fabric-10 and fabric-11 are checked by the reproducibility procedure.
 func TestFabric(t *testing.T) {
@@ -78,11 +87,11 @@ func TestFabric(t *testing.T) {
 		}
 	})
 
-	// edge-worker reaches nodes of the other clusters through spine0.
+	// spine0 reaches every node through the ToRs.
 	t.Run("fabric-05", func(t *testing.T) {
-		for _, dst := range []string{"core1-worker", "core2-worker"} {
-			_, err := sidecarExec("edge-worker", "ping", "-c", "1", "-W", "2", findNode(t, dst).ip)
-			assert.NoError(t, err, dst)
+		for _, n := range labNodes() {
+			_, err := spineExec("ping", "-c", "1", "-W", "2", n.ip)
+			assert.NoError(t, err, n.name)
 		}
 	})
 
@@ -92,11 +101,15 @@ func TestFabric(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	// The host reaches every node.
+	// The host reaches the edge nodes; the spine0 ACL rejects the core nodes (docs/network.md 2.9).
 	t.Run("fabric-07", func(t *testing.T) {
 		for _, n := range labNodes() {
-			_, err := run(nil, "ping", "-c", "1", "-W", "2", n.ip)
-			assert.NoError(t, err, n.name)
+			out, err := run(nil, "ping", "-c", "1", "-W", "2", n.ip)
+			if n.cluster == "edge" {
+				assert.NoError(t, err, n.name)
+			} else {
+				assertPingRejected(t, out, err, n.name)
+			}
 		}
 	})
 
@@ -153,6 +166,14 @@ func TestFabric(t *testing.T) {
 			if assert.NoError(t, err, n.name) {
 				assert.NotEmpty(t, aRecords(out), "%s: %q", n.name, out)
 			}
+		}
+	})
+
+	// Nodes do not reach nodes of the other clusters (docs/network.md 2.9).
+	t.Run("fabric-13", func(t *testing.T) {
+		for _, p := range [][2]string{{"edge-worker", "core1-worker"}, {"core1-worker", "core2-worker"}} {
+			out, err := sidecarExec(p[0], "ping", "-c", "1", "-W", "2", findNode(t, p[1]).ip)
+			assertPingRejected(t, out, err, "%s -> %s", p[0], p[1])
 		}
 	})
 }

@@ -1,0 +1,24 @@
+# spine0 ACL (docs/network.md 2.9), loaded by nat-spine0 with iptables-restore.
+# Only the filter table: the nat table holds the NAT (2.3) and docker's DNS rules.
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+-A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# Nodes to the internet (spine NAT) and to dns0
+-A FORWARD -s 10.69.0.0/16 -o eth0 -j ACCEPT
+-A FORWARD -s 10.69.0.0/16 -o dns0 -j ACCEPT
+# routable Pods to the internet (spine NAT)
+-A FORWARD -s 10.100.128.0/17 -o eth0 -j ACCEPT
+-A FORWARD -s 10.101.128.0/17 -o eth0 -j ACCEPT
+-A FORWARD -s 10.102.128.0/17 -o eth0 -j ACCEPT
+# host to edge (LB VIPs and nodes)
+-A FORWARD -i host0 -d 10.80.0.0/24 -j ACCEPT
+-A FORWARD -i host0 -d 10.69.0.0/24 -j ACCEPT
+# L4LB between clusters (full mesh)
+-A FORWARD -i tor-+ -o tor-+ -d 10.80.0.0/14 -j ACCEPT
+# edge routable to core routable
+-A FORWARD -s 10.100.128.0/17 -d 10.101.128.0/17 -j ACCEPT
+-A FORWARD -s 10.100.128.0/17 -d 10.102.128.0/17 -j ACCEPT
+-A FORWARD -j REJECT --reject-with icmp-admin-prohibited
+COMMIT

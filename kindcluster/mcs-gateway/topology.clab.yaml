@@ -141,13 +141,21 @@ topology:
         - sysctl -w net.ipv4.ip_forward=1
         - sysctl -w net.ipv4.fib_multipath_hash_policy=1
     # iptables for spine0 (the FRR image has none); shares spine0's netns.
+    # Also loads the spine0 ACL (docs/network.md 2.9).
     nat-spine0:
       kind: linux
       image: nicolaka/netshoot:v0.16
       network-mode: container:spine0
       cmd: sleep infinity
+      binds:
+        - iptables/spine0.rules:/etc/mcsgw/spine0.rules:ro
       exec:
         - sh -c 'iptables -t nat -C POSTROUTING -s 10.69.0.0/16 -o eth0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.69.0.0/16 -o eth0 -j MASQUERADE'
+        - sh -c 'iptables -t nat -C POSTROUTING -s 10.100.128.0/17 -o eth0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.100.128.0/17 -o eth0 -j MASQUERADE'
+        - sh -c 'iptables -t nat -C POSTROUTING -s 10.101.128.0/17 -o eth0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.101.128.0/17 -o eth0 -j MASQUERADE'
+        - sh -c 'iptables -t nat -C POSTROUTING -s 10.102.128.0/17 -o eth0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 10.102.128.0/17 -o eth0 -j MASQUERADE'
+        # Replaces only the filter table.
+        - iptables-restore /etc/mcsgw/spine0.rules
     tor-edge:
       kind: linux
       image: quay.io/frrouting/frr:10.7.1

@@ -2,9 +2,6 @@
 kubeProxyReplacement: true
 routingMode: native
 autoDirectNodeRoutes: true
-# No SNAT inside the cluster address space (nodes, LB VIPs, Pods, Services of all clusters).
-# Fabric devices (10.255.0.0/16, e.g. dns0) are outside, so they see node0 addresses.
-ipv4NativeRoutingCIDR: 10.64.0.0/10
 # eth0 (docker "kind" network) only reaches the API server; keep it out.
 devices: node0
 bpf:
@@ -12,8 +9,14 @@ bpf:
   masquerade: true
 ipam:
   mode: multi-pool
+# Advertise the routable pool and LB VIPs to the ToR (docs/cilium.md 4).
+bgpControlPlane:
+  enabled: true
+# Restart the agents and the operator when cilium-config changes; a no-op upgrade restarts nothing.
+rollOutCiliumPods: true
 operator:
   replicas: 1
+  rollOutPods: true
 # Do not compete with Envoy Gateway.
 gatewayAPI:
   enabled: false

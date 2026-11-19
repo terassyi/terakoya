@@ -1,0 +1,45 @@
+# BGP peer config and advertisements shared by all clusters (docs/cilium.md 4.2).
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: tor
+spec:
+  timers:
+    # Default 120; do not wait long to reconnect.
+    connectRetryTimeSeconds: 5
+    # Same as FRR "frr defaults datacenter".
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  gracefulRestart:
+    enabled: true
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: tor
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: tor
+  labels:
+    advertise: tor
+spec:
+  advertisements:
+    # Only the routable pool; the default pool stays inside the cluster.
+    - advertisementType: CiliumPodIPPool
+      selector:
+        matchLabels:
+          io.cilium.podippool.name: routable
+    # All LoadBalancer IPs (a selector is required; this one matches every Service).
+    - advertisementType: Service
+      service:
+        addresses:
+          - LoadBalancerIP
+      selector:
+        matchExpressions:
+          - key: never-used
+            operator: NotIn
+            values:
+              - never

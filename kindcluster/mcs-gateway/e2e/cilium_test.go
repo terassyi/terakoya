@@ -19,26 +19,30 @@ const (
 
 const ciliumTestNS = "cilium-test"
 
-// podPool returns the CIDR of the default CiliumPodIPPool of a cluster (docs/network.md 3.1).
-func podPool(t *testing.T, cluster string) netip.Prefix {
-	t.Helper()
-	for i, c := range clusters {
-		if c == cluster {
-			return netip.MustParsePrefix(fmt.Sprintf("10.%d.0.0/16", 100+i))
-		}
-	}
-	t.Fatalf("unknown cluster %q", cluster)
-	return netip.Prefix{}
-}
-
-// ciliumTestManifest places agnhost on worker2 and netshoot on worker, and
-// exposes agnhost with a NodePort Service (it also has a ClusterIP).
-func ciliumTestManifest(cluster string) string {
-	return fmt.Sprintf(`apiVersion: v1
+// testPodsManifest creates a namespace with netshoot on worker and, if withServer, agnhost on
+// worker2 exposed by a Service of svcType (NodePort or LoadBalancer; both have a ClusterIP).
+func testPodsManifest(ns, cluster string, withServer bool, svcType string) string {
+	m := fmt.Sprintf(`apiVersion: v1
 kind: Namespace
 metadata:
   name: %[1]s
 ---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netshoot
+  namespace: %[1]s
+spec:
+  nodeName: %[2]s-worker
+  containers:
+    - name: netshoot
+      image: %[3]s
+      command: ["sleep", "infinity"]
+`, ns, cluster, netshootImage)
+	if !withServer {
+		return m
+	}
+	return m + fmt.Sprintf(`---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -60,30 +64,19 @@ spec:
           port: 8080
 ---
 apiVersion: v1
-kind: Pod
-metadata:
-  name: netshoot
-  namespace: %[1]s
-spec:
-  nodeName: %[2]s-worker
-  containers:
-    - name: netshoot
-      image: %[4]s
-      command: ["sleep", "infinity"]
----
-apiVersion: v1
 kind: Service
 metadata:
   name: agnhost
   namespace: %[1]s
 spec:
-  type: NodePort
+  type: %[4]s
+  externalTrafficPolicy: Cluster
   selector:
     app: agnhost
   ports:
     - port: 80
       targetPort: 8080
-`, ciliumTestNS, cluster, agnhostImage, netshootImage)
+`, ns, cluster, agnhostImage, svcType)
 }
 
 type podInfo struct {
@@ -103,7 +96,12 @@ type serviceInfo struct {
 
 // netshootCurl runs curl in the netshoot test Pod of a cluster.
 func netshootCurl(cluster string, args ...string) ([]byte, error) {
-	return kubectlExec(cluster, ciliumTestNS, "netshoot", append([]string{"curl", "-sS", "--max-time", "10"}, args...)...)
+	return podCurl(cluster, ciliumTestNS, args...)
+}
+
+// podCurl runs curl in the netshoot Pod of a namespace.
+func podCurl(cluster, ns string, args ...string) ([]byte, error) {
+	return kubectlExec(cluster, ns, "netshoot", append([]string{"curl", "-sS", "--max-time", "10"}, args...)...)
 }
 
 // clientIP returns the host part of agnhost's /clientip response ("ip:port").
@@ -191,7 +189,7 @@ func TestCilium(t *testing.T) {
 	// Every node has a /24 of the cluster's default pool.
 	t.Run("cilium-04", func(t *testing.T) {
 		for _, c := range clusters {
-			pool := podPool(t, c)
+			pool := poolCIDR(t, c, "default")
 			var list struct {
 				Items []struct {
 					Metadata struct {
@@ -233,7 +231,7 @@ func TestCilium(t *testing.T) {
 
 	// Test Pods for cilium-05 and later.
 	for _, c := range clusters {
-		applyManifest(t, c, ciliumTestManifest(c))
+		applyManifest(t, c, testPodsManifest(ciliumTestNS, c, true, "NodePort"))
 	}
 	for _, c := range clusters {
 		mustKubectl(t, c, nil, "-n", ciliumTestNS, "wait", "--for", "condition=Ready", "pod", "--all", "--timeout", "5m")
@@ -256,7 +254,7 @@ func TestCilium(t *testing.T) {
 	// Pod IPs are in the cluster's pool.
 	t.Run("cilium-05", func(t *testing.T) {
 		for _, c := range clusters {
-			pool := podPool(t, c)
+			pool := poolCIDR(t, c, "default")
 			for name, p := range pods[c] {
 				ip, err := netip.ParseAddr(p.Status.PodIP)
 				if assert.NoError(t, err, "%s/%s", c, name) {
@@ -284,10 +282,11 @@ func TestCilium(t *testing.T) {
 		}
 	})
 
-	// NodePort from the host on every node, including nodes without agnhost.
+	// NodePort from spine0 on every node, including nodes without agnhost.
+	// Not from the host, which does not reach core (docs/network.md 2.9).
 	t.Run("cilium-08", func(t *testing.T) {
 		for _, n := range labNodes() {
-			_, err := hostCurl("-sS", "--max-time", "10", fmt.Sprintf("http://%s:%d/clientip", n.ip, svcs[n.cluster].Spec.Ports[0].NodePort))
+			_, err := spineExec("curl", "-sS", "--max-time", "10", fmt.Sprintf("http://%s:%d/clientip", n.ip, svcs[n.cluster].Spec.Ports[0].NodePort))
 			assert.NoError(t, err, n.name)
 		}
 	})

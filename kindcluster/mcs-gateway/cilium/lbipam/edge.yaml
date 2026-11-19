@@ -1,0 +1,8 @@
+# LB IPAM pool of cluster edge (docs/cilium.md 4.2, docs/network.md 3.1).
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: default
+spec:
+  blocks:
+    - cidr: 10.80.0.0/24

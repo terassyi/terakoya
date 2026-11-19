@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/netip"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -158,4 +160,94 @@ func aRecords(out []byte) []string {
 		}
 	}
 	return addrs
+}
+
+// spineExec runs a command in nat-spine0, which shares spine0's netns and has the network tools.
+// Traffic from spine0 itself is not filtered by the spine0 ACL (docs/network.md 2.9).
+func spineExec(cmd ...string) ([]byte, error) {
+	return dockerExec("clab-mcsgw-nat-spine0", cmd...)
+}
+
+// torUplink returns the address of a cluster's ToR on the spine link (docs/network.md 3.2).
+func torUplink(t *testing.T, cluster string) string {
+	t.Helper()
+	for i, c := range clusters {
+		if c == cluster {
+			return fmt.Sprintf("10.255.0.%d", 2*i+1)
+		}
+	}
+	t.Fatalf("unknown cluster %q", cluster)
+	return ""
+}
+
+// clusterIndex returns the index of a cluster in clusters, used in its addresses (docs/network.md 3.1).
+func clusterIndex(t *testing.T, cluster string) int {
+	t.Helper()
+	for i, c := range clusters {
+		if c == cluster {
+			return i
+		}
+	}
+	t.Fatalf("unknown cluster %q", cluster)
+	return -1
+}
+
+// poolCIDR returns the CIDR of a CiliumPodIPPool ("default" or "routable") of a cluster (docs/network.md 3.1).
+func poolCIDR(t *testing.T, cluster, pool string) netip.Prefix {
+	t.Helper()
+	i := clusterIndex(t, cluster)
+	switch pool {
+	case "default":
+		return netip.MustParsePrefix(fmt.Sprintf("10.%d.0.0/17", 100+i))
+	case "routable":
+		return netip.MustParsePrefix(fmt.Sprintf("10.%d.128.0/17", 100+i))
+	}
+	t.Fatalf("unknown pool %q", pool)
+	return netip.Prefix{}
+}
+
+// curlRejected matches the exit code of curl when the connection fails at once, as with the
+// ICMP admin prohibited of the spine0 ACL (7), not a timeout (28). It covers both run
+// ("exit status") and kubectl exec ("exit code").
+var curlRejected = regexp.MustCompile(`exit (status|code) 7\b`)
+
+// assertRejected checks that a curl was rejected by the spine0 ACL (docs/network.md 2.9).
+func assertRejected(t assert.TestingT, err error, msgAndArgs ...any) bool {
+	if !assert.Error(t, err, msgAndArgs...) {
+		return false
+	}
+	return assert.Regexp(t, curlRejected, err.Error(), msgAndArgs...)
+}
+
+// ipRoute is an entry of FRR `show ip route ... json`.
+type ipRoute struct {
+	Protocol string `json:"protocol"`
+	Selected bool   `json:"selected"`
+	Nexthops []struct {
+		IP     string `json:"ip"`
+		Active bool   `json:"active"`
+	} `json:"nexthops"`
+}
+
+// bgpRoutes returns the BGP routes of a FRR router keyed by prefix.
+func bgpRoutes(router string) (map[string][]ipRoute, error) {
+	routes := map[string][]ipRoute{}
+	err := vtyshJSON(router, "show ip route bgp", &routes)
+	return routes, err
+}
+
+// activeNexthops returns the active next hops of the selected route.
+func activeNexthops(routes []ipRoute) []string {
+	var nhs []string
+	for _, r := range routes {
+		if !r.Selected {
+			continue
+		}
+		for _, nh := range r.Nexthops {
+			if nh.Active {
+				nhs = append(nhs, nh.IP)
+			}
+		}
+	}
+	return nhs
 }
