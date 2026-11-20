@@ -17,6 +17,14 @@ rollOutCiliumPods: true
 operator:
   replicas: 1
   rollOutPods: true
+# DSR with the Geneve dispatch and Maglev (docs/cilium.md 5). Routing stays native; the geneve
+# dispatch needs tunnelProtocol geneve. pmtuDiscovery stays off: packets that grow over the node0
+# MTU are fragmented in the outer IP header (docs/cilium.md 5.3).
+tunnelProtocol: geneve
+loadBalancer:
+  mode: dsr
+  dsrDispatch: geneve
+  algorithm: maglev
 # Do not compete with Envoy Gateway.
 gatewayAPI:
   enabled: false

@@ -44,7 +44,6 @@ vars:
       fabric: TestFabric
       cilium: TestCilium
       bgp: TestBGP
-      dsr: TestDSR
       gateway: TestGateway
       mcs: TestMCS
       multicluster-gateway: TestMulticlusterGateway
@@ -207,23 +206,30 @@ tasks:
   lint:helm:
     # Render the Cilium chart, and fail on values keys the chart does not have (docs/cilium.md 2.2).
     # The chart silently ignores unknown keys; keys under a map whose default is {} are free-form.
+    # A key is known if it is in the default values or the templates read it as .Values.<key>
+    # (some keys, such as loadBalancer.mode, are commented out in the default values).
     silent: true
     cmds:
       - cmd: |
           set -euo pipefail
           defaults=$(helm show values {{.CILIUM_CHART}} | yq -o json)
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          helm pull {{.CILIUM_CHART}} --untar --untardir "$tmp"
+          referenced=$(grep -rhoE '\.Values(\.[A-Za-z0-9_]+)+' "$tmp"/cilium/templates | sed 's/^\.Values\.//' | sort -u | jq -R . | jq -s .)
           rc=0
           for c in {{.CLUSTERS}}; do
             helm template cilium {{.CILIUM_CHART}} -n kube-system \
               -f cilium/values/common.yaml -f cilium/values/$c.yaml >/dev/null || { echo "helm template failed: $c"; rc=1; }
           done
           for f in cilium/values/*.yaml; do
-            unknown=$(yq -o json '[.. | select(tag != "!!map" or length == 0) | path]' "$f" | jq -r --argjson d "$defaults" '
+            unknown=$(yq -o json '[.. | select(tag != "!!map" or length == 0) | path]' "$f" | jq -r --argjson d "$defaults" --argjson refs "$referenced" '
               def known($o; $p):
                 ($p | length) == 0
                 or (($o | type) == "object" and ($o | has($p[0]))
                     and (($o[$p[0]] | type == "object" and length == 0) or known($o[$p[0]]; $p[1:])));
-              .[] | select(known($d; .) | not) | map(tostring) | join(".")')
+              .[] | select(known($d; .) | not) | map(tostring) | join(".")
+                  | select(. as $k | $refs | index($k) | not)')
             if [ -n "$unknown" ]; then echo "$f: keys not in the chart values:"; echo "$unknown"; rc=1; fi
           done
           exit $rc
@@ -252,7 +258,7 @@ tasks:
           kubeconform -strict -summary \
             -schema-location default \
             -schema-location "$dir/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
-            cilium/ipam cilium/bgp cilium/lbipam coredns
+            cilium/ipam cilium/bgp cilium/lbipam cilium/bench coredns
 
   lint:links:
     cmds:
@@ -407,6 +413,71 @@ tasks:
             kubectl --context $ctx wait --for condition=established --timeout 60s crd/$crd
           done
           kubectl --context $ctx apply -f cilium/bgp/common.yaml -f cilium/bgp/{{.ITEM}}.yaml -f cilium/lbipam/{{.ITEM}}.yaml
+
+  bench-dsr:
+    desc: Measure DSR throughput with and without Geneve and fragmentation (docs/cilium.md 5.4)
+    vars:
+      RUNS: '{{.RUNS | default "3"}}'
+      DURATION: '{{.DURATION | default "10"}}'
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          ctx=kind-edge
+          host=172.30.0.1
+          tor() { docker exec clab-mcsgw-tor-edge "$@"; }
+          cleanup() {
+            tor ip rule del priority 100 2>/dev/null || true
+            tor ip route flush table 100 2>/dev/null || true
+            kubectl --context $ctx delete --ignore-not-found --wait -f cilium/bench/dsr.yaml >/dev/null
+          }
+          trap cleanup EXIT
+          kubectl --context $ctx apply -f cilium/bench/dsr.yaml >/dev/null
+          kubectl --context $ctx -n dsr-bench wait --for condition=Ready pod/iperf3 --timeout 5m >/dev/null
+          vip=
+          for i in $(seq 120); do
+            vip=$(kubectl --context $ctx -n dsr-bench get service iperf3 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            [ -n "$vip" ] && break
+            sleep 1
+          done
+          [ -n "$vip" ] || { echo "no VIP for dsr-bench/iperf3" >&2; exit 1; }
+          # Pin the receiving node of host -> VIP (docs/cilium.md 5.5).
+          tor ip rule del priority 100 2>/dev/null || true
+          tor ip rule add from $host to $vip/32 ipproto tcp lookup 100 priority 100
+          tor ip route replace $vip/32 via 10.69.0.13 table 100
+          # Wait for the VIP route on spine0 (BGP).
+          for i in $(seq 120); do
+            docker exec clab-mcsgw-host-mcsgw iperf3 -c $vip -t 1 >/dev/null 2>&1 && break
+            sleep 1
+          done
+          counter() { docker exec clab-mcsgw-sc-$1 nstat -az $2 | awk -v k=$2 '$1 == k { print $2 }'; }
+          median() { sort -g | awk '{ v[NR] = $1 } END { print v[int((NR + 1) / 2)] }'; }
+          echo "host: $(nproc) CPUs, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//'), kernel $(uname -r)"
+          echo "VIP $vip, backend edge-worker2, {{.RUNS}} runs of {{.DURATION}}s, median"
+          echo
+          echo "| # | Gbit/s | retransmits | IpFragCreates (rx) | IpReasmOKs / IpReasmFails (edge-worker2) |"
+          echo "|---|---|---|---|---|"
+          # case, receiving node, its node0 address, iperf3 options
+          while read -r n rx rxip opts; do
+            tor ip route replace $vip/32 via $rxip table 100
+            bps=(); rtx=(); frag=(); reok=(); refail=()
+            for r in $(seq {{.RUNS}}); do
+              f0=$(counter $rx IpFragCreates); o0=$(counter edge-worker2 IpReasmOKs); x0=$(counter edge-worker2 IpReasmFails)
+              out=$(docker exec clab-mcsgw-host-mcsgw iperf3 -c $vip -t {{.DURATION}} -J $opts)
+              f1=$(counter $rx IpFragCreates); o1=$(counter edge-worker2 IpReasmOKs); x1=$(counter edge-worker2 IpReasmFails)
+              bps+=($(echo "$out" | jq '(.end.sum_received.bits_per_second / 1e7 | round) / 100'))
+              rtx+=($(echo "$out" | jq '.end.sum_sent.retransmits // 0'))
+              frag+=($((f1 - f0))); reok+=($((o1 - o0))); refail+=($((x1 - x0)))
+            done
+            printf '| %s | %s | %s | %s | %s / %s |\n' "$n" \
+              "$(printf '%s\n' "${bps[@]}" | median)" "$(printf '%s\n' "${rtx[@]}" | median)" \
+              "$(printf '%s\n' "${frag[@]}" | median)" "$(printf '%s\n' "${reok[@]}" | median)" \
+              "$(printf '%s\n' "${refail[@]}" | median)"
+          done <<'EOF'
+          1 edge-worker2 10.69.0.13
+          2 edge-worker 10.69.0.12
+          3 edge-worker 10.69.0.12 -M 1400
+          4 edge-worker 10.69.0.12 -R
+          EOF
 
   stop:
     desc: Destroy the lab and check that nothing is left (docs/operations.md 5)
