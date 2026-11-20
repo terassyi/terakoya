@@ -100,7 +100,6 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 | `deploy-cilium` | Cilium と CiliumPodIPPool | [cilium.md](cilium.md) | 03 |
 | `deploy-coredns` | CoreDNS の Corefile（上流を `dns0` に向ける） | [cilium.md](cilium.md) 2.4 | 03 |
 | `deploy-bgp` | BGP と LB IPAM のリソース | [cilium.md](cilium.md) 4.3 | 04 |
-| `bench-dsr` | DSR の性能を測る（`start` には含めない） | [cilium.md](cilium.md) 5.4 | 05 |
 | `deploy-gateway` | Envoy Gateway と Gateway、HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | 06 |
 | `deploy-mcs` | MCS の CRD、コントローラ、CoreDNS | [mcs.md](mcs.md) | 07 |
 | `deploy-sample` | echo と ServiceExport | [mcs.md](mcs.md) | 07 |

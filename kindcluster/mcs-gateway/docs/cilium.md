@@ -410,9 +410,9 @@ spec:
   - `node0`、ToR の `br0`、ノードと ToR を結ぶリンクを 9000 などにし、Pod の MTU は values の `MTU: 1500` で固定する。
   - フラグメントも ICMP も起きなくなる。5.4 節の結果を見て検討する（8 章）。
 
-### 5.4 性能の測定（`task bench-dsr`）
+### 5.4 性能の測定
 
-フラグメントの影響を、Geneve を通る場合と通らない場合で比べる。合否はなく、結果をこの節の表に書く。テストではないので、`task test` には含めない。
+フラグメントの影響を、Geneve を通る場合と通らない場合で比べた。PR 05 の実装時に一度だけ手で測り、結果をこの節に残す。合否のある検査ではないので、Taskfile のタスクにも `task test` にもしない。
 
 - **構成**
   - Namespace `dsr-bench`（`default` プール）を作る。
@@ -444,7 +444,7 @@ spec:
 - **測定環境**
   - host: Intel Xeon Silver 4314（16 CPU）、カーネル 7.0.0-22-generic
   - 測り方: 各ケース 10 秒 × 3 回の中央値
-  - 同じ日に 2 回測った（`task bench-dsr` を 2 回実行）。スループットの差は 2 回で 0.05 Gbit/s 以内だった。
+  - 同じ日に 2 回測った。スループットの差は 2 回で 0.05 Gbit/s 以内だった。
   - 下の表は 2 回目の値。
 
 | # | スループット | 再送 | `IpFragCreates` | `IpReasmOKs` / `IpReasmFails` |
@@ -483,7 +483,7 @@ ip rule add from 172.30.0.1 to <VIP>/32 ipproto tcp [sport <port>] lookup 100 pr
 
 - 対象は、host（`172.30.0.1`）から VIP への通信だけ。ほかの通信と、BGP の経路（main テーブル）には影響しない。
 - 送信元ポートを指定すると、その 5-tuple の通信だけを固定できる。
-- 片付けるときは `ip rule del` と `ip route flush table 100` を実行する。`task bench-dsr` は終了時に実行する。
+- 片付けるときは `ip rule del` と `ip route flush table 100` を実行する。
 - 応答は main テーブルで返るので、バックエンドのノードから ToR を通って host に戻る。
 
 ---
@@ -493,7 +493,6 @@ ip rule add from 172.30.0.1 to <VIP>/32 ipproto tcp [sport <port>] lookup 100 pr
 ```
 kindcluster/mcs-gateway/cilium/
 ├── values/{common,edge,core1,core2}.yaml      # 03（04、05 で追記）
-├── bench/dsr.yaml                             # 05: 5.4 節の iperf3 サーバと Service
 ├── ipam/{edge,core1,core2}.yaml               # 03: CiliumPodIPPool（default）。04 で routable を足す
 ├── bgp/common.yaml                            # 04: CiliumBGPPeerConfig / CiliumBGPAdvertisement
 ├── bgp/{edge,core1,core2}.yaml                # 04: CiliumBGPClusterConfig
@@ -510,7 +509,6 @@ Taskfile:
 | `deploy-coredns` | 3 クラスタに `coredns/configmap.yaml` を apply し、Corefile のハッシュで CoreDNS をロールアウトして完了を待つ（2.4 節） | 03 |
 | `lint:helm` | 3 クラスタ分の values で `helm template` を実行する。あわせて、values のキーが、チャートの既定の values にあるか、テンプレートから参照されていることを確かめる（[testing.md](testing.md) 4.1） | 03（05 でテンプレートの参照を追加） |
 | `deploy-bgp` | 3 クラスタに 4.3 節の手順（CRD の待ち、BGP と LB IPAM のリソースの apply）を実行する | 04 |
-| `bench-dsr` | 5.4 節の性能の測定を実行し、結果を表で表示する。`task start` には含めない | 05 |
 
 `task start` は `deploy-fabric` の後に `deploy-cilium`、`deploy-coredns`、`deploy-bgp` の順に実行する（[operations.md](operations.md) 4 章）。
 

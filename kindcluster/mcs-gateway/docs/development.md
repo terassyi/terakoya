@@ -80,7 +80,7 @@
 | 02 | `mcsgw/02-fabric` | containerlab、kind 3 クラスタ（CNI なし）、FRR、sidecar、host 経路 | [network.md](network.md) | `fabric` |
 | 03 | `mcsgw/03-cilium` | Cilium（KPR、native routing、multi-pool IPAM） | [cilium.md](cilium.md) 1〜3 章 | `cilium` |
 | 04 | `mcsgw/04-bgp` | BGP Control Plane、LB IPAM | [cilium.md](cilium.md) 4 章 | `bgp` |
-| 05 | `mcsgw/05-dsr` | DSR (Geneve)、Maglev、MTU | [cilium.md](cilium.md) 5 章 | —（疎通は既存の `bgp`、`cilium` で確かめる。性能は `task bench-dsr` で測る） |
+| 05 | `mcsgw/05-dsr` | DSR (Geneve)、Maglev、MTU | [cilium.md](cilium.md) 5 章 | —（疎通は既存の `bgp`、`cilium` で確かめる） |
 | 06 | `mcsgw/06-envoy-gateway` | Envoy Gateway、edge 内の HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | `gateway` |
 | 07 | `mcsgw/07-mcs` | mcs-api、CoreDNS、sync.sh、サンプル | [mcs.md](mcs.md) | `mcs` |
 | 08 | `mcsgw/08-multicluster-gateway` | ServiceImport を backend にする HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | `multicluster-gateway` |
