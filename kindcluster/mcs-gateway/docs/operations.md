@@ -99,7 +99,7 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 | `deploy-fabric` | containerlab、kind、FRR、host 経路 | [network.md](network.md) | 02 |
 | `deploy-cilium` | Cilium と CiliumPodIPPool | [cilium.md](cilium.md) | 03 |
 | `deploy-coredns` | CoreDNS の Corefile（上流を `dns0` に向ける） | [cilium.md](cilium.md) 2.4 | 03 |
-| `deploy-bgp` | BGP と LB IPAM | [cilium.md](cilium.md) | 04 |
+| `deploy-bgp` | BGP と LB IPAM のリソース | [cilium.md](cilium.md) 4.3 | 04 |
 | `deploy-dsr` | DSR / Maglev を有効にする | [cilium.md](cilium.md) | 05 |
 | `deploy-gateway` | Envoy Gateway と Gateway、HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | 06 |
 | `deploy-mcs` | MCS の CRD、コントローラ、CoreDNS | [mcs.md](mcs.md) | 07 |

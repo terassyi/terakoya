@@ -33,6 +33,7 @@ edge クラスタだけに Envoy Gateway を入れて、L7LB として動かす�
 
 - Envoy の Service は `type: LoadBalancer` にする。Cilium LB IPAM が edge のプール（10.80.0.0/24）から VIP を払い出し、BGP で広報する（[cilium.md](cilium.md) 4 章）。
 - `externalTrafficPolicy: Cluster` にして、DSR と Maglev の効果を観察できるようにする。
+- Envoy のデータプレーンの Pod は、edge の `routable` プールから払い出す。core のバックエンドに Pod IP で直接つなぐため（spine0 の ACL が許可するのは、edge の `routable` から core の `routable` への通信だけ。[network.md](network.md) 2.9）。PR 06 で、edge の `routable` プールの `namespaceSelector` に `envoy-gateway-system` を足す（[cilium.md](cilium.md) 3 章）。selector に書き忘れると黙って `default` から払い出されるので、テストで Envoy の Pod IP が `routable` に入っていることを確かめる。
 - Cilium 内蔵の Gateway API は無効にする（`gatewayAPI.enabled: false`）[C-18]。
 
 ### 2.3 ServiceImport を backend にする

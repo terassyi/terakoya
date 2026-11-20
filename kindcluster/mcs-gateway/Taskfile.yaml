@@ -8,7 +8,12 @@ vars:
   # A chart URL, not "cilium --repo": helm would take the local cilium/ directory as the chart.
   CILIUM_CHART: https://helm.cilium.io/cilium-{{.CILIUM_VERSION}}.tgz
   # CRDs whose schemas lint:kubeconform builds, relative to the CRD directory of the tag (docs/testing.md 4.1).
-  CILIUM_CRDS: v2alpha1/ciliumpodippools.yaml
+  CILIUM_CRDS: >-
+    v2alpha1/ciliumpodippools.yaml
+    v2/ciliumbgpclusterconfigs.yaml
+    v2/ciliumbgppeerconfigs.yaml
+    v2/ciliumbgpadvertisements.yaml
+    v2/ciliumloadbalancerippools.yaml
   KUBECONFORM_CACHE: .cache/kubeconform
   D2_FLAGS: --layout elk --theme 0 --pad 24
   # Commands that must be on PATH (docs/operations.md 1, item 8).
@@ -122,7 +127,7 @@ tasks:
     cmds:
       - cmd: |
           rc=0
-          for t in lint:yaml lint:tools lint:actions lint:go lint:testids lint:frr lint:helm lint:kubeconform lint:links lint:diagrams; do
+          for t in lint:yaml lint:tools lint:actions lint:go lint:testids lint:frr lint:iptables lint:helm lint:kubeconform lint:links lint:diagrams; do
             echo "==> $t"
             {{.TASK_EXE}} "$t" || { echo "FAILED: $t"; rc=1; }
           done
@@ -188,6 +193,17 @@ tasks:
           -v "$PWD/{{.ITEM}}:/tmp/frr.conf:ro"
           {{.FRR_IMAGE}} --dryrun -f /tmp/frr.conf
 
+  lint:iptables:
+    # Syntax check of the spine0 ACL with the image of nat-spine0 (docs/network.md 2.9).
+    vars:
+      NETSHOOT_IMAGE:
+        sh: yq '.topology.nodes.nat-spine0.image' topology.clab.yaml
+    cmds:
+      - >-
+        docker run --rm --cap-add NET_ADMIN
+        -v "$PWD/iptables/spine0.rules:/tmp/spine0.rules:ro"
+        {{.NETSHOOT_IMAGE}} iptables-restore --test /tmp/spine0.rules
+
   lint:helm:
     # Render the Cilium chart, and fail on values keys the chart does not have (docs/cilium.md 2.2).
     # The chart silently ignores unknown keys; keys under a map whose default is {} are free-form.
@@ -236,7 +252,7 @@ tasks:
           kubeconform -strict -summary \
             -schema-location default \
             -schema-location "$dir/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
-            cilium/ipam coredns
+            cilium/ipam cilium/bgp cilium/lbipam coredns
 
   lint:links:
     cmds:
@@ -294,6 +310,7 @@ tasks:
       - task: deploy-fabric
       - task: deploy-cilium
       - task: deploy-coredns
+      - task: deploy-bgp
 
   deploy-fabric:
     desc: containerlab, kind, FRR and the host link (docs/network.md 2.7)
@@ -369,6 +386,27 @@ tasks:
           kubectl --context $ctx -n kube-system patch deployment coredns \
             -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"mcsgw/corefile-sha256\":\"$sum\"}}}}}"
           kubectl --context $ctx -n kube-system rollout status deployment coredns --timeout 5m
+
+  deploy-bgp:
+    desc: BGP and LB IPAM resources (docs/cilium.md 4.3)
+    vars:
+      CRDS: >-
+        ciliumbgpclusterconfigs.cilium.io
+        ciliumbgppeerconfigs.cilium.io
+        ciliumbgpadvertisements.cilium.io
+        ciliumloadbalancerippools.cilium.io
+    cmds:
+      # The operator creates the CRDs at startup; they may not exist right after deploy-cilium.
+      # Sessions and routes are not waited for; the tests wait for them.
+      - for: {var: CLUSTERS, split: " "}
+        cmd: |
+          set -euo pipefail
+          ctx=kind-{{.ITEM}}
+          for crd in {{.CRDS}}; do
+            for i in $(seq 120); do kubectl --context $ctx get crd $crd >/dev/null 2>&1 && break; sleep 2; done
+            kubectl --context $ctx wait --for condition=established --timeout 60s crd/$crd
+          done
+          kubectl --context $ctx apply -f cilium/bgp/common.yaml -f cilium/bgp/{{.ITEM}}.yaml -f cilium/lbipam/{{.ITEM}}.yaml
 
   stop:
     desc: Destroy the lab and check that nothing is left (docs/operations.md 5)

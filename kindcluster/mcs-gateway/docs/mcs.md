@@ -11,7 +11,10 @@ KEP-1645 の MCS API [M-1] を使って、core クラスタの Service を edge 
 - core 側: `ServiceExport` で公開する。
 - edge 側: `ServiceImport` と EndpointSlice として受ける。
 
-クラスタ間の Pod IP はファブリックで直接届く（[network.md](network.md)）。そのため、MCS が担うのはサービスディスカバリ（ServiceImport、EndpointSlice、DNS）だけで、データプレーンは持たない。
+edge の `routable` プールの Pod（Envoy）から、core の `routable` プールの Pod には、Pod IP でファブリックを直接通って届く（[network.md](network.md) 2.9、[cilium.md](cilium.md) 3 章）。そのため、MCS が担うのはサービスディスカバリ（ServiceImport、EndpointSlice、DNS）だけで、データプレーンは持たない。
+
+- core のバックエンド（`demo` Namespace）は、core の `routable` プールから払い出す。PR 07 で、core1、core2 の `routable` プールの `namespaceSelector` に `demo` を足す。
+- `default` プールの Pod IP には、edge から届かない。EndpointSlice の endpoints が `routable` に入っていることを、テストで確かめる。
 
 ![MCS の同期](images/mcs-sync.svg)
 
@@ -90,7 +93,7 @@ Taskfile のタスク: `deploy-mcs`、`deploy-sample`、`sync-mcs`
 | mcs-01 | CRD | `kubectl get crd`（3 コンテキスト） | `serviceexports` と `serviceimports` がある |
 | mcs-02 | ServiceExport の状態 | core1、core2 の `serviceexport demo/echo` | 存在し、conditions が正常 |
 | mcs-03 | ServiceImport | edge の `serviceimport demo/echo` | 存在し、port 8080 を持つ |
-| mcs-04 | EndpointSlice | edge で `-l multicluster.kubernetes.io/service-name=echo` | core1 と core2 の 2 つがあり、endpoints が各クラスタの echo Pod IP と一致する |
+| mcs-04 | EndpointSlice | edge で `-l multicluster.kubernetes.io/service-name=echo` | core1 と core2 の 2 つがあり、endpoints が各クラスタの echo Pod IP と一致する。Pod IP は各クラスタの `routable` プールの CIDR 内にある |
 | mcs-05 | DNS | edge の Pod で `echo.demo.svc.clusterset.local` を引く | 名前解決できる |
 | mcs-06 | 接続 | edge の Pod から mcs-05 の名前で HTTP | 成功し、応答のクラスタ名が core1 か core2 |
 | mcs-07 | 追従 | core1 の echo のレプリカ数を変えて `task sync-mcs` | edge の `echo-core1` の endpoints の数が一致する |

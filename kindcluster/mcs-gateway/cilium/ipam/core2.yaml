@@ -1,4 +1,5 @@
-# Pod IP pool of cluster core2 (docs/cilium.md 3, docs/network.md 3.1).
+# Pod IP pools of cluster core2 (docs/cilium.md 3, docs/network.md 3.1).
+# default: cluster-private, not advertised; SNATed to node0 when leaving the cluster.
 apiVersion: cilium.io/v2alpha1
 kind: CiliumPodIPPool
 metadata:
@@ -6,5 +7,25 @@ metadata:
 spec:
   ipv4:
     cidrs:
-      - 10.102.0.0/16
+      - 10.102.0.0/17
     maskSize: 24
+---
+# routable: used across clusters, advertised by BGP and not SNATed.
+# The namespaces that may use it are listed here, not annotated on the namespaces.
+apiVersion: cilium.io/v2alpha1
+kind: CiliumPodIPPool
+metadata:
+  name: routable
+  annotations:
+    ipam.cilium.io/skip-masquerade: "true"
+spec:
+  ipv4:
+    cidrs:
+      - 10.102.128.0/17
+    maskSize: 24
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - bgp-test
