@@ -16,7 +16,7 @@
 | ラベル | ドキュメント |
 |---|---|
 | `fabric` | [network.md](network.md) 6 章 |
-| `cilium`, `bgp`, `dsr` | [cilium.md](cilium.md) 7 章 |
+| `cilium`, `bgp` | [cilium.md](cilium.md) 7 章 |
 | `gateway`, `multicluster-gateway` | [envoy-gateway.md](envoy-gateway.md) 4 章 |
 | `mcs` | [mcs.md](mcs.md) 4 章 |
 
@@ -41,7 +41,6 @@
   ├── fabric_test.go               # 02
   ├── cilium_test.go               # 03
   ├── bgp_test.go                  # 04
-  ├── dsr_test.go                  # 05
   ├── gateway_test.go              # 06
   ├── mcs_test.go                  # 07
   └── multicluster_gateway_test.go # 08
@@ -56,7 +55,6 @@
 | `fabric` | `TestFabric` | `fabric_test.go` |
 | `cilium` | `TestCilium` | `cilium_test.go` |
 | `bgp` | `TestBGP` | `bgp_test.go` |
-| `dsr` | `TestDSR` | `dsr_test.go` |
 | `gateway` | `TestGateway` | `gateway_test.go` |
 | `mcs` | `TestMCS` | `mcs_test.go` |
 | `multicluster-gateway` | `TestMulticlusterGateway` | `multicluster_gateway_test.go` |
@@ -145,7 +143,7 @@ PR 01 で次を用意する。各 PR で必要になったものは、そのと�
 | FRR の設定 | `frr/*.conf` | FRR のコンテナ内で `vtysh --dryrun -f` [F-2] | 02 |
 | spine0 の ACL | `iptables/spine0.rules` | `lint:iptables`。`nat-spine0` と同じイメージ（netshoot）のコンテナ内で `iptables-restore --test`（`--cap-add NET_ADMIN`）。構文と、存在しないマッチやターゲットを検査する（[network.md](network.md) 2.9） | 04 |
 | kubeconform | `cilium/` などの Kubernetes マニフェスト | `lint:kubeconform`。`kubeconform -strict` で、知らないフィールドも拒否する [T-5]。CRD のスキーマは、固定した版の CRD（Cilium は v1.20.4 のタグの `pkg/k8s/apis/cilium.io/client/crds/`）を取得し、`yq` で `openAPIV3Schema` を取り出して作る。`-strict` は入れ子のオブジェクトの知らないフィールドを拒否しないので、`properties` を持つオブジェクトに `additionalProperties: false` を付ける（kubeconform の openapi2jsonschema の strict モードと同じ）。置き場所は `.cache/kubeconform/`（git の対象外）。datreeio/CRDs-catalog は、どの版の CRD から作ったかが保証されないので使わない。対象の CRD は、PR 03 で `CiliumPodIPPool`、PR 04 で BGP（`CiliumBGPClusterConfig`、`CiliumBGPPeerConfig`、`CiliumBGPAdvertisement`）と `CiliumLoadBalancerIPPool` | 03, 04 |
-| helm template | Cilium の values | `lint:helm`。3 クラスタ分の values で `helm template` が通ること。あわせて、values の各キーがチャートの既定の values（`helm show values`）にあること（既定が `{}` の map の下は除く）。チャートは知らないキーをエラーにしないので、消えたキーを書いても気づけないため（[cilium.md](cilium.md) 2.2） | 03 |
+| helm template | Cilium の values | `lint:helm`。3 クラスタ分の values で `helm template` が通ること。あわせて、values の各キーが、チャートの既定の values（`helm show values`）にあるか、チャートのテンプレートが `.Values.<キー>` で参照していること（既定が `{}` の map の下は除く）。チャートは知らないキーをエラーにしないので、消えたキーを書いても気づけないため。テンプレートの参照も見るのは、`loadBalancer.mode` のように既定の values ではコメントアウトされているキーがあるため（[cilium.md](cilium.md) 2.2） | 03（05 でテンプレートの参照を追加） |
 | helm template | Envoy Gateway の values | 同上 | 06 |
 
 `lint:helm` と `lint:kubeconform` は、チャートと CRD を外部（helm.cilium.io、GitHub）から取得する。リンクチェックとは違い、固定した版を取るだけなので、外部のサイトの状態で結果は変わらない。

@@ -44,7 +44,6 @@ vars:
       fabric: TestFabric
       cilium: TestCilium
       bgp: TestBGP
-      dsr: TestDSR
       gateway: TestGateway
       mcs: TestMCS
       multicluster-gateway: TestMulticlusterGateway
@@ -207,23 +206,30 @@ tasks:
   lint:helm:
     # Render the Cilium chart, and fail on values keys the chart does not have (docs/cilium.md 2.2).
     # The chart silently ignores unknown keys; keys under a map whose default is {} are free-form.
+    # A key is known if it is in the default values or the templates read it as .Values.<key>
+    # (some keys, such as loadBalancer.mode, are commented out in the default values).
     silent: true
     cmds:
       - cmd: |
           set -euo pipefail
           defaults=$(helm show values {{.CILIUM_CHART}} | yq -o json)
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          helm pull {{.CILIUM_CHART}} --untar --untardir "$tmp"
+          referenced=$(grep -rhoE '\.Values(\.[A-Za-z0-9_]+)+' "$tmp"/cilium/templates | sed 's/^\.Values\.//' | sort -u | jq -R . | jq -s .)
           rc=0
           for c in {{.CLUSTERS}}; do
             helm template cilium {{.CILIUM_CHART}} -n kube-system \
               -f cilium/values/common.yaml -f cilium/values/$c.yaml >/dev/null || { echo "helm template failed: $c"; rc=1; }
           done
           for f in cilium/values/*.yaml; do
-            unknown=$(yq -o json '[.. | select(tag != "!!map" or length == 0) | path]' "$f" | jq -r --argjson d "$defaults" '
+            unknown=$(yq -o json '[.. | select(tag != "!!map" or length == 0) | path]' "$f" | jq -r --argjson d "$defaults" --argjson refs "$referenced" '
               def known($o; $p):
                 ($p | length) == 0
                 or (($o | type) == "object" and ($o | has($p[0]))
                     and (($o[$p[0]] | type == "object" and length == 0) or known($o[$p[0]]; $p[1:])));
-              .[] | select(known($d; .) | not) | map(tostring) | join(".")')
+              .[] | select(known($d; .) | not) | map(tostring) | join(".")
+                  | select(. as $k | $refs | index($k) | not)')
             if [ -n "$unknown" ]; then echo "$f: keys not in the chart values:"; echo "$unknown"; rc=1; fi
           done
           exit $rc

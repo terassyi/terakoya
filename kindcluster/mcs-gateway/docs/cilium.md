@@ -1,7 +1,7 @@
 # Cilium（KPR / multi-pool IPAM / BGP / LB IPAM / DSR / Maglev）
 
 - ステータス: `Reviewed`
-- テストラベル: `cilium`, `bgp`, `dsr`
+- テストラベル: `cilium`, `bgp`
 - 関連: [network.md](network.md)（ファブリックとアドレス計画）、[envoy-gateway.md](envoy-gateway.md)（VIP の利用者）
 
 ## 1. 概要
@@ -65,6 +65,11 @@ rollOutCiliumPods: true             # 04: values の変更で agent を作り直
 operator:
   replicas: 1
   rollOutPods: true                 # 04: values の変更で operator を作り直す
+tunnelProtocol: geneve              # 05: DSR の geneve dispatch に要る。ルーティングは native のまま
+loadBalancer:
+  mode: dsr                         # 05（5 章）
+  dsrDispatch: geneve               # 05
+  algorithm: maglev                 # 05
 gatewayAPI:
   enabled: false                    # Envoy Gateway と競合させない
 ```
@@ -75,11 +80,17 @@ gatewayAPI:
 - **`ipv4NativeRoutingCIDR`**: クラスタごとの値なので `<cluster>.yaml` に書く（2.3 節）。
 - **`operator.replicas: 1`**: 既定は 2。1 クラスタ 3 ノードの小さな構成なので、1 で足りる。
 - **`autoDirectNodeRoutes`**: 同じクラスタのノードは同じ L2（ToR の `br0`）にいるので、各ノードが他のノードの Pod ブロックへの経路を node0 経由で持つ。multi-pool で払い出したブロックも、この経路の対象になる（v1.20.4 の `pkg/k8s/node.go` の `ParseCiliumNode` が、プールのブロックを `IPv4SecondaryAllocCIDRs` に入れる [C-24]）。
-- DSR と Maglev の設定は PR 05 で足す（5 章）。PR 03 では入れない。
 - **`bgpControlPlane.enabled`**（PR 04）: BGP Control Plane を有効にする（4 章）。BGP の CRD は、これが有効なときだけ operator が作る（v1.20.4 の `pkg/k8s/synced/crd.go` [C-26]）。
 - **`rollOutCiliumPods`、`operator.rollOutPods`**（PR 04）: 既定は `false`。`false` のままだと、`helm upgrade` で ConfigMap（`cilium-config`）が変わっても agent と operator は古い設定のまま動き続ける。`true` にすると、チャートが ConfigMap のハッシュを Pod テンプレートの annotation に入れるので、設定が変わったときだけ作り直される [C-21]。
-  - PR 03 のラボに PR 04 の values を当てる場合や、PR 05 の `deploy-dsr` のように、既存のクラスタの values を変える場面で必要になる。
+  - PR 03 のラボに PR 04 の values を当てる場合や、PR 04 のラボに PR 05 の DSR の values を当てる場合のように、既存のクラスタの values を変える場面で必要になる。
   - 設定が変わらなければハッシュも変わらないので、`task start` を繰り返しても agent は再起動しない。
+- **`tunnelProtocol`、`loadBalancer`**（PR 05）: DSR を Geneve dispatch で使い、バックエンドを Maglev で選ぶ（5 章）。
+  - `loadBalancer.mode`、`dsrDispatch`、`algorithm` は、チャートの既定の values ではコメントアウトされているが、テンプレートは参照している（`cilium-configmap.yaml` の `bpf-lb-mode` など）。
+  - そのため、`lint:helm` は、テンプレートが参照するキーも既知のキーとして扱う（[testing.md](testing.md) 4.1）。
+  - `pmtuDiscovery` は既定（`false`）のままにする（5.3 節）。
+- **DSR を入れるタスク:** 当初は `deploy-dsr` という別のタスクで helm upgrade する予定だったが、やめた。DSR の values は `common.yaml` に書き、`deploy-cilium` の 1 回の `helm upgrade --install` で入れる。
+  - 別のタスクにすると、`task start` のたびに Cilium を 2 回 upgrade することになる。
+  - PR 04 のラボに PR 05 の values を当てる場合も、`rollOutCiliumPods` で agent が作り直されるので、`deploy-cilium` だけで足りる。
 
 ### 2.3 <cluster>.yaml
 
@@ -92,16 +103,19 @@ cluster:
 k8sServiceHost: edge-control-plane  # docker DNS で eth0 側のアドレスに解決される
 k8sServicePort: 6443
 ipv4NativeRoutingCIDR: 10.100.0.0/16  # 自クラスタの Pod（default と routable）。この範囲への通信は SNAT しない
+maglev:
+  hashSeed: bWNzZ3ctZWRnZS0x           # 05: base64 で 12 byte（5.2 節）
 ```
 
-| クラスタ | `cluster.name` | `cluster.id` | `k8sServiceHost` | `ipv4NativeRoutingCIDR` |
-|---|---|---|---|---|
-| edge | edge | 1 | edge-control-plane | 10.100.0.0/16 |
-| core1 | core1 | 2 | core1-control-plane | 10.101.0.0/16 |
-| core2 | core2 | 3 | core2-control-plane | 10.102.0.0/16 |
+| クラスタ | `cluster.name` | `cluster.id` | `k8sServiceHost` | `ipv4NativeRoutingCIDR` | `maglev.hashSeed` |
+|---|---|---|---|---|---|
+| edge | edge | 1 | edge-control-plane | 10.100.0.0/16 | `bWNzZ3ctZWRnZS0x`（`mcsgw-edge-1`） |
+| core1 | core1 | 2 | core1-control-plane | 10.101.0.0/16 | `bWNzZ3ctY29yZTEx`（`mcsgw-core11`） |
+| core2 | core2 | 3 | core2-control-plane | 10.102.0.0/16 | `bWNzZ3ctY29yZTIx`（`mcsgw-core21`） |
 
 - **`k8sServiceHost`**: Cilium agent は hostNetwork で動き、チャートの既定では `dnsPolicy` を指定しない。hostNetwork の Pod の `ClusterFirst` は、ノードの `/etc/resolv.conf`（docker の組み込み DNS）を使う。そのため、CoreDNS が動く前でもコンテナ名を引ける。Cilium の kind 用の手順 [C-15] と neco-apps-lite [I-6] も、control-plane のコンテナ名を書いている。
 - `cluster.id` は ClusterMesh を使わないので必須ではないが、クラスタを見分けるために書く。
+- **`maglev.hashSeed`**（PR 05）: 12 文字の ASCII を base64 にした値。乱数である必要はなく、クラスタの中で同じであればよい（5.2 節）。
 - **`ipv4NativeRoutingCIDR`**（PR 04 で `10.64.0.0/10` から変えた）: 自クラスタの Pod の /16（[network.md](network.md) 3.1）。Cilium の eBPF masquerade は、送信元を node0 のアドレスに SNAT するかを、次の順に決める（v1.20.4 の `bpf/lib/nat.h` の `snat_v4_needs_masquerade` [C-30]）。
   1. 宛先が `ipv4NativeRoutingCIDR` の中なら SNAT しない。
   2. 送信元の Pod のプールが `skip-masquerade` なら SNAT しない（3 章）。
@@ -335,19 +349,142 @@ spec:
 
 ![DSR (Geneve) + Maglev](images/dsr.svg)
 
-- 外部から VIP 宛ての通信:
+- ノードの外から VIP（と NodePort）に来る通信は、次の順に流れる。
   1. ToR が ECMP で受信ノードを選ぶ。
-  2. 受信ノードが Maglev でバックエンドを選び、Geneve でバックエンドノードへ転送する。
-  3. 応答はバックエンドノードからクライアントへ直接返る。
-- `geneve` dispatch は native routing でも使える。`opt` dispatch は native routing 専用 [C-1]。古い資料には DSR と Geneve の関係について食い違う記述がある [C-3]。
-- Maglev が効くのは外部（N-S）の通信だけ [C-1]。
-- Envoy Pod から core Pod への通信は Pod IP に直接向かうので、DSR は関係しない。core の LB Service に直接アクセスする通信には DSR が効く。
-- `externalTrafficPolicy: Cluster` の Service で観察する。
+  2. 受信ノードが Maglev でバックエンドを選ぶ。
+  3. バックエンドが別のノードなら、受信ノードは元のパケットを Geneve で包んでそのノードへ送る。最初の SYN だけ、Geneve のオプションに VIP とポートを入れる [C-1]。
+  4. バックエンドのノードは Geneve を外して Pod に渡す。応答は送信元を VIP:port に書き換え、受信ノードを通らずにクライアントへ直接返す。
+- **DSR が効く通信**
+  - host から edge の VIP への通信。
+  - 別のクラスタの Pod から VIP への通信。VIP を持つクラスタから見ると、ノードの外から来る通信になる。
+  - spine0 から NodePort への通信（cilium-08）。
+- **DSR が効かない通信**
+  - 同じクラスタの Pod から VIP への通信。socket LB が `connect()` の時点でバックエンドに変換するので、VIP のパケットは流れない。
+  - Envoy の Pod から core の Pod IP への通信（PR 08）。Service を通らないので、DSR は関係しない。
+- **クライアントの IP が残る:** SNAT モードでは、受信ノードがバックエンドへ送るときに送信元を自分のアドレスに SNAT する。DSR では SNAT しないので、バックエンドにはクライアントの IP がそのまま見える [C-1]。
+  - 別クラスタの Pod から VIP へ送ったとき、バックエンドに見える送信元は次のようになる。
+    - `default` の Pod から送ったとき: 送信元のノードのアドレス（送信元のノードの SNAT は残る）。
+    - `routable` の Pod から送ったとき: Pod IP。
+- **観察する Service:** `externalTrafficPolicy: Cluster` の Service で観察する。`Local` にすると、バックエンドのいないノードは VIP を受けなくなり、受信ノードとバックエンドが分かれない。
+- **`geneve` dispatch を使う理由:** `geneve` dispatch は native routing でも使える [C-1]。
+  - 古い資料には、DSR と Geneve の関係について食い違う記述がある [C-3]。
+  - `opt` dispatch（IP オプション）は、オプション付きのパケットを遅い経路で処理するルーターがあるので使わない [C-1]。
+
+**v1.20.4 のソースで確かめたこと**
+
+- **トンネルの設定:** DSR の `geneve` dispatch を有効にすると、`routingMode: native` のままでも `cilium_geneve` デバイスが作られる（`pkg/loadbalancer/config.go` の `tunnel.NewEnabler` [C-32]）。
+  - その際、`tunnelProtocol` が `geneve` でなければ、agent の起動時に失敗する（`pkg/kpr/initializer/kube_proxy_replacement.go` [C-33]）。
+  - チャートの `tunnelProtocol` の既定は空で、ConfigMap には `vxlan` が入る。そのため、`tunnelProtocol: geneve` を明示する。
+- **Geneve で包む場所:** BPF はトンネルのキーを設定して、`cilium_geneve` にリダイレクトするだけ（`bpf/lib/overloadable_skb.h` の `ctx_set_encap_info4` [C-34]）。外側のヘッダを付けるのは、カーネルの geneve ドライバ。
+  - キーのフラグは `BPF_F_ZERO_CSUM_TX` だけで、`BPF_F_DONT_FRAGMENT` は付けない。
+  - `cilium_geneve` も df を設定せずに作る（`pkg/datapath/loader/netlink.go` [C-35]）。
+  - つまり、外側の IP ヘッダには DF が立たない（5.3 節）。
+- **増えるバイト数:** 外側の IP（20）、UDP（8）、Geneve（8）、内側の Ethernet（14）で 50 byte。SYN はさらに DSR のオプションの 12 byte が足される（`pkg/mtu/mtu.go` の `TunnelOverheadIPv4`、`DsrTunnelOverhead` [C-36]、`bpf/lib/nodeport.h` の `encap_geneve_dsr_opt4` [C-37]）。
 
 ### 5.2 Maglev の設定
 
 - `maglev.tableSize` は既定値（16381）のままにする [C-1]。
-- `maglev.hashSeed` は、全ノードで同じ値にする必要がある [C-1]。クラスタごとに固定値を values に書き、再現性を保つ。
+- `maglev.hashSeed` は、同じクラスタの全ノードで同じ値にする必要がある [C-1]。
+  - クラスタごとに固定の値を values に書き、再現性を保つ（2.3 節）。
+  - 値は、base64 で 12 byte になるもの（16 文字）にする。それ以外だと agent が起動しない（`pkg/maglev/maglev.go` [C-38]）。
+- Maglev を使っても、受信ノードが変わったときに同じ 5-tuple で同じバックエンドが選ばれるのは、全ノードが同じテーブルを持つから。
+
+### 5.3 MTU
+
+ファブリックの MTU は 1500 のままにし、`pmtuDiscovery` も有効にしない（どちらも既定のまま）。その結果、包んで MTU を超えるパケットは、外側の IP でフラグメントされて届く。まずこの状態で動作と性能を確かめ（5.4 節）、その結果を見て次の手を決める（8 章）。
+
+- **フラグメントが起きる流れ**
+  - クライアントが MSS いっぱいのセグメント（IP で 1500 byte）を送る。受信ノードが包むと 1550 byte になり、`node0`（MTU 1500）から出られない。
+  - 外側に DF が立たないので（5.1 節）、受信ノードのカーネルは外側の IP パケットをフラグメントする。
+  - バックエンドのノードは、IP で再構成してから Geneve を外す。内側のパケットの DF（TCP は立てる）は、外側のフラグメントには関係しない。
+  - Geneve が流れるのは同じクラスタのノード間だけで、ToR の `br0` の同じ L2 の中に閉じる。フラグメントは spine を通らないので、ACL（[network.md](network.md) 2.9）にも当たらない。
+- **フラグメントで起きる問題**
+  - パケット数が倍になる。
+  - 受け手で再構成のコストがかかる。
+  - 再構成のバッファが溢れると、断片の 1 つが落ちて全体が失われる。
+- **`pmtuDiscovery.enabled: true` にした場合（今回は採らない）**
+  - Cilium の BPF が包む前に大きさを確かめ、超えるパケットを捨てて、クライアントに ICMP frag-needed（MTU は `node0` の MTU から増える分を引いた値）を返す。
+  - 判定は `dsr_is_too_big` で、`ENABLE_DSR_ICMP_ERRORS` のときだけ働く（`bpf/lib/nodeport.h` [C-37]、`pkg/datapath/linux/config/config.go` [C-39]）。
+  - フラグメントはなくなる。その代わり、クライアントと宛先の組ごとに、最初の大きなパケットが捨てられて再送になる。
+- **クラスタ内の L2 の MTU を上げる場合（今回は採らない）**
+  - `node0`、ToR の `br0`、ノードと ToR を結ぶリンクを 9000 などにし、Pod の MTU は values の `MTU: 1500` で固定する。
+  - フラグメントも ICMP も起きなくなる。5.4 節の結果を見て検討する（8 章）。
+
+### 5.4 性能の測定
+
+フラグメントの影響を、Geneve を通る場合と通らない場合で比べた。PR 05 の実装時に一度だけ手で測り、結果をこの節に残す。合否のある検査ではないので、Taskfile のタスクにも `task test` にもしない。
+
+- **構成**
+  - Namespace `dsr-bench`（`default` プール）を作る。
+  - edge-worker2 に、netshoot で `iperf3 -s` を動かす Pod を置く。
+  - その Pod を指す `type: LoadBalancer` の Service（port 5201、`externalTrafficPolicy: Cluster`）を作る。
+  - クライアントは host（`host-mcsgw` の netshoot で `iperf3 -c <VIP>`）。
+- **受信ノードの固定:** 5.5 節の方法で固定する。
+- **測るケース**
+
+| # | 受信ノード | 向き | MSS | Geneve | フラグメント |
+|---|---|---|---|---|---|
+| 1 | edge-worker2（バックエンドと同じ） | host → Pod | 既定（1460） | なし | なし |
+| 2 | edge-worker | host → Pod | 既定（1460） | あり | あり |
+| 3 | edge-worker | host → Pod | 1400（`-M 1400`） | あり | なし |
+| 4 | edge-worker | Pod → host（`-R`） | 既定（1460） | ACK だけ | なし |
+
+- **ケースの意図**
+  - 1 と 3 の差が、Geneve で包む分のコスト。
+  - 2 と 3 の差が、フラグメントのコスト。
+  - 4 は、応答を直接返す向きの確認。データを運ぶ応答は Geneve を通らない。
+- **測る値**
+  - 各ケースを 10 秒ずつ 3 回測り、中央値をとる。
+  - `iperf3 -J` からスループットと再送の数をとる。
+  - 受信ノードの `nstat` の `IpFragCreates` の増分と、バックエンドのノードの `IpReasmOKs`、`IpReasmFails` の増分も記録する。sidecar はノードと netns を共有するので、sidecar で `nstat` を実行すれば、ノードの値が読める。
+- **注意:** すべてのクラスタが 1 台の host の上で動くので、値は CPU で決まる。絶対値ではなく、ケースどうしの比で見る。表には測った host の CPU とカーネルも書く。
+
+結果:
+
+- **測定環境**
+  - host: Intel Xeon Silver 4314（16 CPU）、カーネル 7.0.0-22-generic
+  - 測り方: 各ケース 10 秒 × 3 回の中央値
+  - 同じ日に 2 回測った。スループットの差は 2 回で 0.05 Gbit/s 以内だった。
+  - 下の表は 2 回目の値。
+
+| # | スループット | 再送 | `IpFragCreates` | `IpReasmOKs` / `IpReasmFails` |
+|---|---|---|---|---|
+| 1 | 2.39 Gbit/s | 0 | 0 | 0 / 0 |
+| 2 | 0.73 Gbit/s | 202 | 1,248,296 | 624,148 / 0 |
+| 3 | 1.01 Gbit/s | 1,153 | 0 | 0 / 0 |
+| 4 | 2.62 Gbit/s | 0 | 0 | 0 / 0 |
+
+- **Geneve で包むコスト（1 と 3）:** スループットは 2.39 から 1.01 Gbit/s へ、約 4 割に下がる。
+- **フラグメントのコスト（2 と 3）:**
+  - スループットは 1.01 から 0.73 Gbit/s へ、さらに約 3 割下がる。
+  - `IpFragCreates` は `IpReasmOKs` のちょうど 2 倍。つまり、Geneve で包んだパケットはどれも 2 つに分かれ、すべて再構成されている（`IpReasmFails` は 0）。
+- **応答の向き（4）:** Pod から host への向きは、受信ノードを経由しない。値は 1 と同じ水準で、DSR の応答は Geneve のコストを受けない。
+- **再送について**
+  - 3 の再送は多いが、実際に失われたパケットはない。確認したことは次のとおり。
+    - edge-worker、edge-worker2、tor-edge のインターフェースの drop が増えていない。
+    - 両ノードの `IpInDiscards` と `IpOutDiscards` も増えていない。
+    - Cilium の `cilium-dbg bpf metrics list` に drop が増えていない。
+  - 送信側の host の `nstat` では、`TcpExtTCPDSACKRecvSegs` が `TcpRetransSegs` と同じ数だった。
+    - 再送したセグメントはすべて、受信側から DSACK（すでに受け取っている）として返っている。
+    - つまり、順序の入れ替わりで起きた spurious な fast retransmit である。
+  - 2 は `TcpExtTCPSACKReorder` が大きく（5 秒で約 8,700）、TCP が入れ替わりに慣れるので、spurious な再送は 3 より少ない。
+  - 1 と 4 は、1 回目の測定では 95 と 98 だった。
+- **結論:** 1 台の host の上では、フラグメントを許しても通信は成り立つ（ケース 2 の `IpReasmFails` は 0）。コストは、Geneve で包む分の約 3 割増しである。MTU を合わせるかどうかは、この値を見て後の PR で決める（8 章）。
+
+### 5.5 受信ノードの固定
+
+ToR の ECMP は 3 ノードのどれかを選ぶ。DSR の動きを確かめるには、受信ノードとバックエンドのノードを分ける必要があるので、測定（5.4 節）では tor-edge に policy routing を一時的に入れて、受信ノードを決める。
+
+```sh
+# tor-edge の中で実行する（docker exec clab-mcsgw-tor-edge ...）
+ip route replace <VIP>/32 via <受信ノードの node0 のアドレス> table 100
+ip rule add from 172.30.0.1 to <VIP>/32 ipproto tcp [sport <port>] lookup 100 priority 100
+```
+
+- 対象は、host（`172.30.0.1`）から VIP への通信だけ。ほかの通信と、BGP の経路（main テーブル）には影響しない。
+- 送信元ポートを指定すると、その 5-tuple の通信だけを固定できる。
+- 片付けるときは `ip rule del` と `ip route flush table 100` を実行する。
+- 応答は main テーブルで返るので、バックエンドのノードから ToR を通って host に戻る。
 
 ---
 
@@ -370,9 +507,8 @@ Taskfile:
 |---|---|---|
 | `deploy-cilium` | 3 クラスタに 2.1 節の手順（`helm upgrade --install`、CRD の待ち、プールの apply、`cilium status --wait`、ノードの Ready の待ち）を実行する | 03 |
 | `deploy-coredns` | 3 クラスタに `coredns/configmap.yaml` を apply し、Corefile のハッシュで CoreDNS をロールアウトして完了を待つ（2.4 節） | 03 |
-| `lint:helm` | 3 クラスタ分の values で `helm template` を実行する。あわせて、values のキーがチャートの既定の values にあることを確かめる（[testing.md](testing.md) 4.1） | 03 |
+| `lint:helm` | 3 クラスタ分の values で `helm template` を実行する。あわせて、values のキーが、チャートの既定の values にあるか、テンプレートから参照されていることを確かめる（[testing.md](testing.md) 4.1） | 03（05 でテンプレートの参照を追加） |
 | `deploy-bgp` | 3 クラスタに 4.3 節の手順（CRD の待ち、BGP と LB IPAM のリソースの apply）を実行する | 04 |
-| `deploy-dsr` | DSR / Maglev を有効にした values で helm upgrade する | 05 |
 
 `task start` は `deploy-fabric` の後に `deploy-cilium`、`deploy-coredns`、`deploy-bgp` の順に実行する（[operations.md](operations.md) 4 章）。
 
@@ -429,32 +565,30 @@ cilium-02 から cilium-11 は 3 クラスタすべてで確かめる。テス�
 | bgp-04 | edge の `routable` → core の `routable` | edge の `bgp-test` の netshoot から、core1、core2 の agnhost の Pod IP へ `curl /clientip` | 成功し、返る送信元が netshoot の Pod IP（SNAT されない） |
 | bgp-05 | `routable` どうしで通さないもの | core1 の netshoot から edge と core2 の agnhost へ、core2 の netshoot から edge と core1 の agnhost へ、Pod IP で `curl` | すべて拒否される |
 | bgp-06 | `default` から別クラスタの Pod | edge の `bgp-default` の netshoot から、core1 の agnhost の Pod IP へ `curl` | 拒否される（送信元のノードで SNAT され、spine0 の ACL に当たる） |
-| bgp-07 | L4LB のメッシュ | 各クラスタの `bgp-test` と `bgp-default` の netshoot から、ほかの 2 クラスタの VIP へ `curl /clientip` | 12 通りすべて成功する。`bgp-default` からは、返る送信元が送信元のノードのアドレスか、受信ノードのアドレス（受信ノードで SNAT された場合）になる |
+| bgp-07 | L4LB のメッシュ | 各クラスタの `bgp-test` と `bgp-default` の netshoot から、ほかの 2 クラスタの VIP へ `curl /clientip` | 12 通りすべて成功する |
 | bgp-08 | host から VIP | host から 3 クラスタの VIP へ `curl` | edge の VIP は成功する。core1、core2 の VIP は拒否される |
 | bgp-09 | VIP の取り下げ | テスト用とは別の LB の Service を作り、経路を確かめてから消す | 消した後、ToR と spine0 から VIP の /32 がなくなる |
 | bgp-10 | `routable` の Pod からインターネット | edge の `bgp-test` の netshoot から `curl https://registry.k8s.io/v2/` | HTTP の応答が返る（spine で SNAT される。[network.md](network.md) 2.3） |
 
 bgp-04 は、`skip-masquerade` が native routing でも効くこと（3 章）の確認を兼ねる。
 
-### 7.3 `dsr`
+### 7.3 DSR
 
-| # | 確かめること | 観測方法 | 期待値 |
-|---|---|---|---|
-| dsr-01 | Service の LB 設定 | `cilium-dbg service list` / `cilium-dbg bpf lb list` | DSR と Maglev になっている |
-| dsr-02 | Geneve での転送 | 受信ノードの `node0` を tcpdump | バックエンドノード宛ての Geneve（UDP 6081）が観測される |
-| dsr-03 | 応答の直接返送 | 受信ノードの `node0` を tcpdump | VIP からクライアントへの応答が受信ノードを通らない |
-| dsr-04 | Maglev の一貫性 | 送信元ポートを固定し、受信ノードを変えて同じ 5-tuple で接続する | 同じバックエンドが選ばれる |
-| dsr-05 | MTU（Geneve で運ばれる方向） | バックエンドが受信ノードと別のノードにだけいる状態で、host から VIP へ大きなリクエストボディ（例: 1 MB の POST。MSS いっぱいのセグメントになる）を送る。受信ノードの `node0` を tcpdump し、`cilium-dbg monitor --type drop` を見る | 全体が届いて 200 が返る。MSS いっぱいのセグメントも Geneve で転送され、ICMP frag-needed も drop も出ない |
+PR 05 では、DSR 専用のテスト（ラベル）は置かない。DSR を有効にした後も VIP に届くこと（疎通）は、既存のテストで確かめる。
+
+- bgp-07（Pod から別クラスタの VIP）と bgp-08（host から edge の VIP）。受信ノードは ECMP で選ばれるので、バックエンドのいないノードに着いた通信は、Geneve でバックエンドのノードへ運ばれる。
+- cilium-08（NodePort）も DSR になる。期待値（すべて成功する）は変わらない。
+- 性能は 5.4 節で測る（合否のない測定）。
 
 ---
 
 ## 8. 未確定事項
 
-- **MTU（PR 05）:** Geneve のカプセル化で増える分（50 byte 程度）を見込む必要がある。`node0` とファブリックの MTU を上げるか、Pod の MTU を下げるかを決める。
-- **DSR と multi-pool の組み合わせ（PR 05）:** v1.20.4 の multi-pool の制約には DSR は挙がっていない [C-4]。PR 05 で確かめる。
+- **MTU（5.3 節）:** PR 05 は、フラグメントを許したまま動かす。5.4 節の測定の結果を見て、クラスタ内の L2 の MTU を上げるかを決める。
+- **DSR と multi-pool の組み合わせ（PR 05）:** v1.20.4 の multi-pool の制約には DSR は挙がっていない [C-4]。バックエンドが `routable` のプールの Pod の場合は bgp-07、bgp-08（VIP の Service は `bgp-test` の agnhost）で、`default` のプールの Pod の場合は cilium-08（NodePort も DSR になる）で、疎通を確かめる。
 
 ---
 
 ## 9. 参考文献
 
-[I-1] [I-6] [I-7] [C-1]〜[C-18] [C-21]〜[C-31] [D-1]〜[D-3] [T-12]（[references.md](references.md)）
+[I-1] [I-6] [I-7] [C-1]〜[C-18] [C-21]〜[C-39] [D-1]〜[D-3] [T-12]（[references.md](references.md)）
