@@ -30,7 +30,7 @@ edge の `routable` プールの Pod（Envoy）から、core の `routable` プ�
 | mcs-api-controller | 全クラスタ（Namespace `mcs-system`） | [M-2] の `controllers/`。役割は 5 章で確定する |
 | CoreDNS の `multicluster` オプション | 全クラスタ | `clusterset.local` ゾーン [M-6] |
 | 同期スクリプト `mcs/sync.sh` | host で実行 | `task sync-mcs` から呼ぶ |
-| サンプル app `demo/echo` | edge、core1、core2 | 応答にクラスタ名とノード名を含める。core では ServiceExport を付ける |
+| サンプル app `demo/echo` | edge、core1、core2 | 応答にノード名（クラスタ名で始まる）を含める。PR 06 で edge に置き（[envoy-gateway.md](envoy-gateway.md) 2.4）、PR 07 で core にも置く。core では ServiceExport を付ける |
 
 ### 2.2 同期（sync.sh）
 
@@ -78,7 +78,7 @@ kindcluster/mcs-gateway/
 │   ├── coredns/              # RBAC（Corefile は coredns/configmap.yaml に足す）
 │   └── sync.sh
 └── sample/
-    ├── echo.yaml             # Deployment + Service（全クラスタ共通）
+    ├── echo.yaml             # Namespace + Deployment + Service（全クラスタ共通。06 で追加）
     └── serviceexport.yaml    # core のみ
 ```
 

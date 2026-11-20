@@ -181,14 +181,14 @@ spec:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
-        values: [bgp-test]          # 04。06 で envoy-gateway-system を足す
+        values: [bgp-test, envoy-gateway-system]  # 04（bgp-test）、06（envoy-gateway-system、edge だけ）
 ```
 
 - **プールの選び方:** `routable` を使う Namespace は、プールの側の `namespaceSelector` で決める（v1.20.4 の `Documentation/network/concepts/ipam/multi-pool.rst` [C-29]）。Namespace や Pod のアノテーション（`ipam.cilium.io/ip-pool`）は使わない。
   - クラスタの外に出てよい Pod の一覧が、`cilium/ipam/<cluster>.yaml` の 1 か所にまとまる。境界を 1 か所で管理するため。
   - Namespace は名前（`kubernetes.io/metadata.name` ラベル。Kubernetes が付ける）で選ぶ。ほかのコンポーネントが作る Namespace にラベルを足さなくてよい。
-  - どのプールの selector にも合わない Pod は `default` から払い出される [C-29]。`namespaceSelector` に書き忘れた Namespace の Pod は、黙って `default` になる。PR 06、07 のテストで、Envoy とバックエンドの Pod IP が `routable` に入っていることを確かめて、これに気づけるようにする。
-  - PR 04 ではテスト用の `bgp-test` だけを書く。edge の `envoy-gateway-system`（Envoy のデータプレーン。[envoy-gateway.md](envoy-gateway.md)）は PR 06 で、core の `demo`（バックエンド。[mcs.md](mcs.md)）は PR 07 で足す。
+  - どのプールの selector にも合わない Pod は `default` から払い出される [C-29]。`namespaceSelector` に書き忘れた Namespace の Pod は、黙って `default` になる。Envoy とバックエンドの書き忘れは、PR 08 の multicluster-gateway のテストが通らないことで分かる（spine0 の ACL で拒否される）。
+  - PR 04 ではテスト用の `bgp-test` だけを書く。edge の `envoy-gateway-system`（Envoy のデータプレーンとコントローラ。[envoy-gateway.md](envoy-gateway.md) 2.3）は PR 06 で、core の `demo`（バックエンド。[mcs.md](mcs.md)）は PR 07 で足す。
 - **`skip-masquerade`:** `routable` の Pod の送信元を、ノードで SNAT しない（v1.20.4 の `pkg/ipam/multipool.go` の `shouldSkipMasqForPool` [C-31]）。native routing でも効くことを、PR 04 の実装時に bgp-04 で確かめた（アノテーションの定義のコメントには「tunneling mode のとき」とあるが、`bpf/lib/nat.h` の判定にその条件はない [C-30]）。ドキュメントも、BGP で広報するプールの Pod の送信元を保ち、ネットワーク側のファイアウォールでほかのプールと見分けるために使う、としている [C-29]。インターネットへの通信は spine で SNAT する（[network.md](network.md) 2.3）。
 - プールの選択と `skip-masquerade` は、Pod の作成時にだけ評価される [C-29]。後から変えても、動いている Pod には効かない。
 - プールのブロックは、そのプールの Pod が置かれたノードにだけ払い出される。`routable` のブロックを持つのは、`routable` の Pod がいるノードだけになる（PR 04 の実装時に確かめた）。

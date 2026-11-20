@@ -3,7 +3,7 @@
 mcs-gateway の設計と実装で参照する文献の一覧。
 
 - 各コンポーネントのドキュメントからは、ここの ID（例: `[C-4]`）で参照する。読んで確かめたことは、参照する側のドキュメントの本文に書く。
-- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11、L-10、L-11、K-4 は 2026-11-06 に追加・確認。C-26〜C-31 は 2026-11-18 に追加・確認）。
+- URL はすべて 2026-10-27 時点で到達できることを確認済み（C-20、E-8、T-3、T-4、T-8〜T-11、L-10、L-11、K-4 は 2026-11-06 に追加・確認。C-26〜C-31 は 2026-11-18 に追加・確認。C-32〜C-39、E-9〜E-12 は 2026-11-20 に追加・確認）。
 - docs.cilium.io などのバージョン付きドキュメントは、`stable` ではなく、[operations.md](operations.md) 2 章で固定したバージョンのものを読む（例: `/en/v1.20/`）。
 - 新しく文献を見つけたら、該当するカテゴリに追記する。
 
@@ -90,6 +90,10 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | E-6 | [Envoy Gateway: Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/) | 01, 06 | Envoy Gateway、Gateway API、Kubernetes のバージョンの対応 |
 | E-7 | [envoyproxy/gateway（GitHub）](https://github.com/envoyproxy/gateway) | 06, 08 | ServiceImport の endpoint 解決の実装（EndpointSlice のラベル `multicluster.kubernetes.io/service-name`）を、ソースで確認する |
 | E-8 | [Envoy Gateway Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/) | 01 | v1.9 は Envoy Proxy 1.39、Gateway API v1.6.1、Kubernetes 1.33〜1.36 に対応する。Kubernetes と Gateway API のバージョン選定に使った |
+| E-9 | [envoyproxy/gateway v1.9.3 `charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml`](https://github.com/envoyproxy/gateway/blob/v1.9.3/charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml) | 06 | チャートが同梱する Gateway API の CRD。experimental channel、bundle-version v1.6.1 |
+| E-10 | [envoyproxy/gateway v1.9.3 `api/v1alpha1/shared_types.go`](https://github.com/envoyproxy/gateway/blob/v1.9.3/api/v1alpha1/shared_types.go) | 06 | `KubernetesServiceSpec`。Envoy の Service の `type`（既定 `LoadBalancer`）と `externalTrafficPolicy`（既定 `Local`） |
+| E-11 | [envoyproxy/gateway v1.9.3 `api/v1alpha1/envoygateway_types.go`](https://github.com/envoyproxy/gateway/blob/v1.9.3/api/v1alpha1/envoygateway_types.go) | 06 | `KubernetesDeployMode`。既定の `ControllerNamespace` では、Envoy のデータプレーンをコントローラの Namespace に作る |
+| E-12 | [kubernetes/kubernetes v1.36.4 `test/images/agnhost/porter/porter.go`](https://github.com/kubernetes/kubernetes/blob/v1.36.4/test/images/agnhost/porter/porter.go) | 06 | agnhost の `porter`。環境変数 `SERVE_PORT_<port>` の値を、そのポートで返す |
 | G-1 | [Gateway API](https://gateway-api.sigs.k8s.io/) | 06 | 仕様全般 |
 | G-2 | [HTTPRoute](https://gateway-api.sigs.k8s.io/reference/api-types/httproute/) | 06, 08 | backendRefs、重み、マッチ条件 |
 | G-3 | [GEP-1748: Gateway API Interaction with Multi-Cluster Services](https://gateway-api.sigs.k8s.io/geps/gep-1748/) | 08 | ServiceImport を backendRef にするときの意味論 |
