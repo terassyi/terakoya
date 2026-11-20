@@ -31,7 +31,7 @@ kind クラスタ 3 つ（L7LB 用の **edge** × 1、アプリ用の **core** �
 | Goal | 判定するテスト（ラベル） | 仕様を書くドキュメント |
 |---|---|---|
 | 1 | `fabric` | [network.md](network.md) |
-| 2 | `cilium`, `bgp`, `dsr` | [cilium.md](cilium.md) |
+| 2 | `cilium`, `bgp` | [cilium.md](cilium.md) |
 | 3 | `gateway`, `mcs`, `multicluster-gateway` | [envoy-gateway.md](envoy-gateway.md), [mcs.md](mcs.md) |
 | 4, 5 | 全ラベル | [testing.md](testing.md), [development.md](development.md) |
 
@@ -81,7 +81,7 @@ kind クラスタ 3 つ（L7LB 用の **edge** × 1、アプリ用の **core** �
 | ドキュメント | 内容 | テストラベル |
 |---|---|---|
 | [network.md](network.md) | containerlab トポロジ、kind クラスタ、FRR の spine/ToR、アドレス計画、host との接続 | `fabric` |
-| [cilium.md](cilium.md) | Cilium の KPR、multi-pool IPAM、BGP Control Plane、LB IPAM、DSR/Maglev | `cilium`, `bgp`, `dsr` |
+| [cilium.md](cilium.md) | Cilium の KPR、multi-pool IPAM、BGP Control Plane、LB IPAM、DSR/Maglev | `cilium`, `bgp` |
 | [envoy-gateway.md](envoy-gateway.md) | edge の Envoy Gateway、Gateway API、ServiceImport backend | `gateway`, `multicluster-gateway` |
 | [mcs.md](mcs.md) | mcs-api、CoreDNS multicluster、クラスタ間の同期 | `mcs` |
 

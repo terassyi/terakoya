@@ -1,16 +1,20 @@
-# DSR (Geneve dispatch) + Maglev のパケットの流れ
+# DSR (Geneve dispatch) + Maglev のパケットの流れ (docs/cilium.md 5)
 shape: sequence_diagram
 
 client: "host\n(client)"
 tor: "tor-edge\n(ECMP)"
 rx: "edge-worker\n受信ノード"
 be: "edge-worker2\nバックエンドノード"
-pod: "Envoy Pod"
+pod: "バックエンド Pod"
 
 client -> tor: "SYN  dst = VIP:80"
 tor -> rx: "ECMP で選択"
 rx -> rx: "Maglev: 5-tuple → backend"
-rx -> be: "Geneve (UDP 6081)\nオプションに VIP:port"
-be -> pod: "デカプセル化 → Pod へ"
+rx -> be: "Geneve (UDP 6081)\nSYN だけオプションに VIP:port"
+be -> pod: "デカプセル化 → Pod へ\n(送信元は client のまま)"
 pod -> be: "SYN-ACK"
 be -> client: "src = VIP:80 に書き換えて直接返す\n(受信ノードを経由しない)" {style.stroke: "#3BA36B"}
+client -> tor: "データ (IP で 1500 byte)"
+tor -> rx: "同じ受信ノード"
+rx -> be: "Geneve で 1550 byte\n→ 外側の IP でフラグメント (node0 MTU 1500)" {style.stroke: "#D9822B"}
+be -> pod: "再構成 → デカプセル化 → Pod へ"

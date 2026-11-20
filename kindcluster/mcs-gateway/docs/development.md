@@ -80,7 +80,7 @@
 | 02 | `mcsgw/02-fabric` | containerlab、kind 3 クラスタ（CNI なし）、FRR、sidecar、host 経路 | [network.md](network.md) | `fabric` |
 | 03 | `mcsgw/03-cilium` | Cilium（KPR、native routing、multi-pool IPAM） | [cilium.md](cilium.md) 1〜3 章 | `cilium` |
 | 04 | `mcsgw/04-bgp` | BGP Control Plane、LB IPAM | [cilium.md](cilium.md) 4 章 | `bgp` |
-| 05 | `mcsgw/05-dsr` | DSR (Geneve)、Maglev、MTU | [cilium.md](cilium.md) 5 章 | `dsr` |
+| 05 | `mcsgw/05-dsr` | DSR (Geneve)、Maglev、MTU | [cilium.md](cilium.md) 5 章 | —（疎通は既存の `bgp`、`cilium` で確かめる。性能は `task bench-dsr` で測る） |
 | 06 | `mcsgw/06-envoy-gateway` | Envoy Gateway、edge 内の HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | `gateway` |
 | 07 | `mcsgw/07-mcs` | mcs-api、CoreDNS、sync.sh、サンプル | [mcs.md](mcs.md) | `mcs` |
 | 08 | `mcsgw/08-multicluster-gateway` | ServiceImport を backend にする HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | `multicluster-gateway` |
@@ -105,7 +105,7 @@ PR をまたいで名前がぶれないように、ここで固定する。変�
 | kind クラスタ名 | `edge`, `core1`, `core2` |
 | kube context | `kind-edge`, `kind-core1`, `kind-core2` |
 | host の IF | `to-mcsgw` |
-| テストのラベル | `fabric`, `cilium`, `bgp`, `dsr`, `gateway`, `mcs`, `multicluster-gateway`（テスト関数との対応は [testing.md](testing.md) 3.2） |
+| テストのラベル | `fabric`, `cilium`, `bgp`, `gateway`, `mcs`, `multicluster-gateway`（テスト関数との対応は [testing.md](testing.md) 3.2） |
 | テスト ID | `<ラベル>-NN`（例: `fabric-01`、`multicluster-gateway-02`） |
 | Namespace | Cilium: `kube-system`、Envoy Gateway: `envoy-gateway-system`、MCS: `mcs-system`、サンプル: `demo` |
 | サンプル app | `demo/echo`（port 8080）。応答にクラスタ名とノード名を含める |

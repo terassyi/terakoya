@@ -67,6 +67,14 @@ neco-apps-lite のパスは `~/workspace/github.com/cybozu-private/neco-apps-lit
 | C-29 | [Multi-Pool IPAM の概念（v1.20.4 `Documentation/network/concepts/ipam/multi-pool.rst`）](https://github.com/cilium/cilium/blob/v1.20.4/Documentation/network/concepts/ipam/multi-pool.rst) | 04 | プールの選び方（`ipam.cilium.io/ip-pool` のアノテーション、プールの `namespaceSelector` / `podSelector`、合わなければ `default`）。Masquerade Behaviour（`skip-masquerade`、`--only-masquerade-default-pool`） |
 | C-30 | [cilium/cilium v1.20.4 `bpf/lib/nat.h`](https://github.com/cilium/cilium/blob/v1.20.4/bpf/lib/nat.h) | 04 | `snat_v4_needs_masquerade` の判定順（`ipv4NativeRoutingCIDR`、プールの skip-masquerade、ip-masq-agent、リモートノード） |
 | C-31 | [cilium/cilium v1.20.4 `pkg/ipam/multipool.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/ipam/multipool.go) | 04 | `shouldSkipMasqForPool`。プールのアノテーション `ipam.cilium.io/skip-masquerade: "true"` で、そのプールの Pod を SNAT しない |
+| C-32 | [cilium/cilium v1.20.4 `pkg/loadbalancer/config.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/loadbalancer/config.go) | 05 | DSR の `geneve` dispatch を有効にすると、native routing でもトンネル（`cilium_geneve`）を有効にする（`tunnel.NewEnabler`）。MTU の調整はデータパスに任せる（`WithoutMTUAdaptation`） |
+| C-33 | [cilium/cilium v1.20.4 `pkg/kpr/initializer/kube_proxy_replacement.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/kpr/initializer/kube_proxy_replacement.go) | 05 | DSR の `geneve` dispatch には `tunnelProtocol: geneve` が要る（起動時の検査） |
+| C-34 | [cilium/cilium v1.20.4 `bpf/lib/overloadable_skb.h`](https://github.com/cilium/cilium/blob/v1.20.4/bpf/lib/overloadable_skb.h) | 05 | `ctx_set_encap_info4`。トンネルのキーのフラグは `BPF_F_ZERO_CSUM_TX` だけで、外側に DF を立てない |
+| C-35 | [cilium/cilium v1.20.4 `pkg/datapath/loader/netlink.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/datapath/loader/netlink.go) | 05 | `cilium_geneve` の作成。df を設定しない |
+| C-36 | [cilium/cilium v1.20.4 `pkg/mtu/mtu.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/mtu/mtu.go) | 05 | `TunnelOverheadIPv4`（50 byte）と `DsrTunnelOverhead`（12 byte） |
+| C-37 | [cilium/cilium v1.20.4 `bpf/lib/nodeport.h`](https://github.com/cilium/cilium/blob/v1.20.4/bpf/lib/nodeport.h) | 05 | `encap_geneve_dsr_opt4`（DSR のオプションは SYN だけ）と `dsr_is_too_big`（`ENABLE_DSR_ICMP_ERRORS` のときだけ ICMP frag-needed を返す） |
+| C-38 | [cilium/cilium v1.20.4 `pkg/maglev/maglev.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/maglev/maglev.go) | 05 | `maglev.hashSeed` は base64 で 12 byte でなければならない |
+| C-39 | [cilium/cilium v1.20.4 `pkg/datapath/linux/config/config.go`](https://github.com/cilium/cilium/blob/v1.20.4/pkg/datapath/linux/config/config.go) | 05 | `ENABLE_DSR_ICMP_ERRORS` は `pmtuDiscovery.enabled`（`enable-pmtu-discovery`）のときだけ定義される |
 
 ---
 
