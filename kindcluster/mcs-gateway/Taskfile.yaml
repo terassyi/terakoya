@@ -7,6 +7,12 @@ vars:
   CILIUM_VERSION: 1.20.4
   # A chart URL, not "cilium --repo": helm would take the local cilium/ directory as the chart.
   CILIUM_CHART: https://helm.cilium.io/cilium-{{.CILIUM_VERSION}}.tgz
+  ENVOY_GATEWAY_VERSION: v1.9.3
+  ENVOY_GATEWAY_CHART: oci://docker.io/envoyproxy/gateway-helm
+  # CRDs whose schemas lint:kubeconform builds, relative to the CRD directory of the chart.
+  ENVOY_GATEWAY_CRDS: >-
+    gatewayapi-crds.yaml
+    generated/gateway.envoyproxy.io_envoyproxies.yaml
   # CRDs whose schemas lint:kubeconform builds, relative to the CRD directory of the tag (docs/testing.md 4.1).
   CILIUM_CRDS: >-
     v2alpha1/ciliumpodippools.yaml
@@ -240,25 +246,42 @@ tasks:
     cmds:
       - cmd: |
           set -euo pipefail
-          dir={{.KUBECONFORM_CACHE}}/cilium-{{.CILIUM_VERSION}}
-          mkdir -p "$dir"
-          for crd in {{.CILIUM_CRDS}}; do
-            url=https://raw.githubusercontent.com/cilium/cilium/v{{.CILIUM_VERSION}}/pkg/k8s/apis/cilium.io/client/crds/$crd
-            y=$(curl -fsSL "$url")
-            kind=$(echo "$y" | yq '.spec.names.kind | downcase')
-            for v in $(echo "$y" | yq '.spec.versions[].name'); do
-              # kubeconform -strict does not reach nested objects; deny unknown fields in the schema
-              # itself, as openapi2jsonschema does in strict mode.
-              echo "$y" | yq -o json ".spec.versions[] | select(.name == \"$v\") | .schema.openAPIV3Schema" |
-                jq 'walk(if type == "object" and has("properties") and (has("additionalProperties") | not)
-                           and (has("x-kubernetes-preserve-unknown-fields") | not)
-                         then .additionalProperties = false else . end)' > "$dir/${kind}_$v.json"
+          # Write one schema per CRD version: <kind>_<version>.json. A file may hold several CRDs.
+          # kubeconform -strict does not reach nested objects; deny unknown fields in the schema
+          # itself, as openapi2jsonschema does in strict mode.
+          schemas() {
+            local docs n i y kind v
+            docs=$(cat)
+            n=$(echo "$docs" | yq ea '[select(.kind == "CustomResourceDefinition")] | length')
+            for i in $(seq 0 $((n - 1))); do
+              y=$(echo "$docs" | yq ea "[select(.kind == \"CustomResourceDefinition\")] | .[$i]")
+              kind=$(echo "$y" | yq '.spec.names.kind | downcase')
+              for v in $(echo "$y" | yq '.spec.versions[].name'); do
+                echo "$y" | yq -o json ".spec.versions[] | select(.name == \"$v\") | .schema.openAPIV3Schema" |
+                  jq 'walk(if type == "object" and has("properties") and (has("additionalProperties") | not)
+                             and (has("x-kubernetes-preserve-unknown-fields") | not)
+                           then .additionalProperties = false else . end)' > "$1/${kind}_$v.json"
+              done
             done
+          }
+          cilium={{.KUBECONFORM_CACHE}}/cilium-{{.CILIUM_VERSION}}
+          mkdir -p "$cilium"
+          for crd in {{.CILIUM_CRDS}}; do
+            curl -fsSL https://raw.githubusercontent.com/cilium/cilium/v{{.CILIUM_VERSION}}/pkg/k8s/apis/cilium.io/client/crds/$crd | schemas "$cilium"
+          done
+          eg={{.KUBECONFORM_CACHE}}/envoy-gateway-{{.ENVOY_GATEWAY_VERSION}}
+          mkdir -p "$eg"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          helm pull {{.ENVOY_GATEWAY_CHART}} --version {{.ENVOY_GATEWAY_VERSION}} --untar --untardir "$tmp" 2>/dev/null
+          for crd in {{.ENVOY_GATEWAY_CRDS}}; do
+            schemas "$eg" < "$tmp/gateway-helm/charts/crds/crds/$crd"
           done
           kubeconform -strict -summary \
             -schema-location default \
-            -schema-location "$dir/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
-            cilium/ipam cilium/bgp cilium/lbipam coredns
+            -schema-location "$cilium/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
+            -schema-location "$eg/{{"{{"}}.ResourceKind{{"}}"}}_{{"{{"}}.ResourceAPIVersion{{"}}"}}.json" \
+            cilium/ipam cilium/bgp cilium/lbipam coredns envoy-gateway sample
 
   lint:links:
     cmds:
@@ -317,6 +340,8 @@ tasks:
       - task: deploy-cilium
       - task: deploy-coredns
       - task: deploy-bgp
+      - task: deploy-sample
+      - task: deploy-gateway
 
   deploy-fabric:
     desc: containerlab, kind, FRR and the host link (docs/network.md 2.7)
@@ -413,6 +438,27 @@ tasks:
             kubectl --context $ctx wait --for condition=established --timeout 60s crd/$crd
           done
           kubectl --context $ctx apply -f cilium/bgp/common.yaml -f cilium/bgp/{{.ITEM}}.yaml -f cilium/lbipam/{{.ITEM}}.yaml
+
+  deploy-sample:
+    desc: The sample app demo/echo (docs/envoy-gateway.md 2.4)
+    cmds:
+      # edge only until PR 07 adds core1 and core2 (docs/mcs.md).
+      - cmd: |
+          set -euo pipefail
+          kubectl --context kind-edge apply -f sample/echo.yaml
+          kubectl --context kind-edge -n demo rollout status deployment echo --timeout 5m
+
+  deploy-gateway:
+    desc: Envoy Gateway, the Gateway and the HTTPRoutes on edge (docs/envoy-gateway.md 2.2)
+    cmds:
+      - cmd: |
+          set -euo pipefail
+          ctx=kind-edge
+          # The chart installs the Gateway API and Envoy Gateway CRDs; --wait waits for the controller.
+          helm upgrade --install eg {{.ENVOY_GATEWAY_CHART}} --version {{.ENVOY_GATEWAY_VERSION}} \
+            --kube-context $ctx -n envoy-gateway-system --create-namespace --wait --timeout 10m
+          kubectl --context $ctx apply -f envoy-gateway/
+          kubectl --context $ctx -n demo wait --for condition=Programmed --timeout 5m gateway/gw
 
   stop:
     desc: Destroy the lab and check that nothing is left (docs/operations.md 5)

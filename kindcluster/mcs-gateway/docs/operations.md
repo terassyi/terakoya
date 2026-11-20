@@ -37,7 +37,7 @@
 | Kubernetes（kindest/node） | v1.36.4（digest 付きで固定） | `topology.clab.yaml`（`k8s-kind` ノードの `image`） | Cilium 1.20 [C-20] と Envoy Gateway 1.9 [E-8] が、どちらも 1.36 までを対応範囲に含めている。1.37 はどちらの範囲にも入っていない |
 | Cilium | 1.20.4 | Taskfile vars | 最新の安定版。BGP v2 は `cilium.io/v2` で使える |
 | Envoy Gateway | v1.9.3 | Taskfile vars | 最新の安定版 |
-| Gateway API CRD | v1.6.1 | Envoy Gateway の chart に同梱されたもの | Envoy Gateway 1.9 が対応している版 [E-8]。単独では入れない |
+| Gateway API CRD | v1.6.1（experimental channel） | Envoy Gateway の chart に同梱されたもの | Envoy Gateway 1.9 が対応している版 [E-8]。チャートが同梱するのは experimental channel [E-9]。単独では入れない |
 | FRR | 10.7.1（`quay.io/frrouting/frr:10.7.1`） | `topology.clab.yaml` | 最新の安定版 |
 | netshoot | v0.16（`nicolaka/netshoot:v0.16`） | `topology.clab.yaml` | sidecar と spine の NAT 用 |
 | mcs-api | v0.5.2 | Taskfile vars | 最新の安定版 |
@@ -100,9 +100,9 @@ aqua の checksum 検証を有効にする（`checksum.enabled: true`、`require
 | `deploy-cilium` | Cilium と CiliumPodIPPool | [cilium.md](cilium.md) | 03 |
 | `deploy-coredns` | CoreDNS の Corefile（上流を `dns0` に向ける） | [cilium.md](cilium.md) 2.4 | 03 |
 | `deploy-bgp` | BGP と LB IPAM のリソース | [cilium.md](cilium.md) 4.3 | 04 |
+| `deploy-sample` | echo（06 は edge だけ）と ServiceExport（07） | [envoy-gateway.md](envoy-gateway.md) 2.4、[mcs.md](mcs.md) | 06 |
 | `deploy-gateway` | Envoy Gateway と Gateway、HTTPRoute | [envoy-gateway.md](envoy-gateway.md) | 06 |
 | `deploy-mcs` | MCS の CRD、コントローラ、CoreDNS | [mcs.md](mcs.md) | 07 |
-| `deploy-sample` | echo と ServiceExport | [mcs.md](mcs.md) | 07 |
 | `sync-mcs` | edge への同期 | [mcs.md](mcs.md) | 07 |
 
 まだ実装されていないコンポーネントのタスクは、Taskfile に置かない。「追加する PR」の列のとおりに増やしていく。

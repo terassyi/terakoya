@@ -1,0 +1,13 @@
+# Envoy data plane settings for GatewayClass envoy-gateway (docs/envoy-gateway.md 2.3).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: lb
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        # The default is Local; Cluster lets every node that ECMP picks accept the VIP.
+        externalTrafficPolicy: Cluster
